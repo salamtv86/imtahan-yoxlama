@@ -1,0 +1,2882 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>İmtahan cavab vərəqlərinin yoxlanması</title>
+<style>
+:root{
+  --bg:#f4f5f7;--card:#fff;--ink:#18202c;--muted:#5d6878;--line:#dde1e8;
+  --acc:#1f5fd0;--acc-d:#174aa5;--acc-l:#e8f0fd;
+  --ok:#17803f;--ok-l:#e4f5ea;--warn:#b86a00;--warn-l:#fff3dc;--err:#c0332b;--err-l:#fde8e6;
+  --r:10px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+header.top{background:#101a2b;color:#fff;padding:18px 20px 0}
+header.top h1{margin:0;font-size:20px;font-weight:650;letter-spacing:.2px}
+header.top p{margin:4px 0 12px;color:#b9c4d8;font-size:13.5px;max-width:760px}
+nav.tabs{display:flex;gap:4px;flex-wrap:wrap;max-width:1180px;margin:0 auto}
+nav.tabs button{background:transparent;color:#b9c4d8;border:0;border-radius:8px 8px 0 0;padding:10px 16px;font:inherit;font-weight:560;cursor:pointer}
+nav.tabs button:hover{color:#fff}
+nav.tabs button.on{background:var(--bg);color:var(--ink)}
+.wrap{max-width:1180px;margin:0 auto}
+main{padding:18px 16px 60px}
+.stack>*+*{margin-top:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px}
+.card h2{margin:0 0 4px;font-size:16.5px}
+.card h3{margin:14px 0 6px;font-size:14.5px}
+.card .sub{color:var(--muted);font-size:13.5px;margin:0 0 12px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+label.f{display:block;font-size:13px;color:var(--muted);margin-bottom:3px}
+input[type=text],input[type=number],select,textarea{width:100%;font:inherit;padding:8px 10px;border:1px solid #c9cfd9;border-radius:8px;background:#fff;color:var(--ink)}
+input:focus,select:focus,textarea:focus{outline:2px solid #9cbcf3;border-color:var(--acc)}
+input.mono,textarea.mono,input.pat{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;letter-spacing:1.5px}
+.btn{font:inherit;font-weight:560;border:1px solid #c3cad6;background:#fff;color:var(--ink);padding:8px 14px;border-radius:8px;cursor:pointer}
+.btn:hover{background:#f1f3f7}
+.btn.primary{background:var(--acc);border-color:var(--acc);color:#fff}
+.btn.primary:hover{background:var(--acc-d)}
+.btn.danger{color:var(--err);border-color:#e3b3af}
+.btn.sm{padding:4px 9px;font-size:13px;font-weight:500}
+.btn:disabled{opacity:.5;cursor:default}
+.seg{display:inline-flex;border:1px solid #c3cad6;border-radius:8px;overflow:hidden}
+.seg button{border:0;background:#fff;font:inherit;padding:6px 16px;cursor:pointer;font-weight:560}
+.seg button+button{border-left:1px solid #c3cad6}
+.seg button.on{background:var(--acc);color:#fff}
+.seg button .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#2fb170;margin-left:6px}
+.note{background:var(--acc-l);border:1px solid #c5d8f7;border-radius:8px;padding:10px 12px;font-size:13.5px}
+.note.warn{background:var(--warn-l);border-color:#f0d9a8}
+.note.err{background:var(--err-l);border-color:#efc2be}
+.note.ok{background:var(--ok-l);border-color:#bfe3cc}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.formula{font-family:ui-monospace,Menlo,Consolas,monospace;background:#f3f5f9;border-radius:8px;padding:10px 12px;font-size:13.5px;overflow-x:auto}
+.keyrow{display:grid;grid-template-columns:150px 1fr;gap:6px 12px;align-items:start;padding:10px 0;border-top:1px solid var(--line)}
+.keyrow:first-of-type{border-top:0}
+.keyrow .nm{font-weight:600;padding-top:7px}
+.codedkeys{display:flex;gap:8px;flex-wrap:wrap}
+.codedkeys div{width:92px}
+.codedkeys input{padding:6px 8px}
+.stat{font-size:12.5px;margin-top:3px}
+.stat.ok{color:var(--ok)}.stat.bad{color:var(--err)}.stat.mid{color:var(--warn)}
+.previews{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.previews canvas{width:100%;height:auto;border:1px solid var(--line);background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.drop{display:block;border:2px dashed #9db3d9;background:#f7faff;border-radius:12px;padding:26px 16px;text-align:center;cursor:pointer}
+.drop.over{background:var(--acc-l);border-color:var(--acc)}
+.drop b{font-size:16px}
+.bar{height:10px;background:#e6eaf1;border-radius:6px;overflow:hidden;margin:8px 0 2px}
+.bar i{display:block;height:100%;background:var(--acc);width:0;transition:width .15s}
+.tblwrap{overflow:auto;max-height:70vh;border:1px solid var(--line);border-radius:8px}
+table.t{border-collapse:collapse;width:100%;font-size:13.5px;background:#fff}
+table.t th,table.t td{padding:6px 9px;border-bottom:1px solid #edf0f4;text-align:left;white-space:nowrap}
+table.t thead th{position:sticky;top:0;background:#f2f4f8;z-index:2;font-weight:600;border-bottom:1px solid var(--line)}
+table.t thead tr+tr th{top:31px}
+table.t td.n,table.t th.n{text-align:right;font-variant-numeric:tabular-nums}
+table.t tr.clk{cursor:pointer}
+table.t tr.clk:hover td{background:#f6f9ff}
+table.t td.tot{font-weight:700}
+table.t .grp{text-align:center;border-left:1px solid var(--line)}
+table.t td.gl,table.t th.gl{border-left:1px solid var(--line)}
+.pill{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;font-weight:600}
+.pill.ok{background:var(--ok-l);color:var(--ok)}.pill.warn{background:var(--warn-l);color:var(--warn)}.pill.err{background:var(--err-l);color:var(--err)}.pill.gray{background:#eceff4;color:#5d6878}
+.sortable{cursor:pointer;user-select:none}
+.cards3{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+.kpi b{display:block;font-size:22px;font-variant-numeric:tabular-nums}
+.kpi span{font-size:12.5px;color:var(--muted)}
+ol.steps{margin:6px 0 0;padding-left:20px}ol.steps li{margin:3px 0}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#101a2b;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:60;max-width:92vw;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+/* modal */
+.mback{position:fixed;inset:0;background:rgba(10,16,28,.55);z-index:40;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:20px 10px}
+.modal{background:#fff;border-radius:12px;max-width:1120px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.35)}
+.modal .mh{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#fff;border-radius:12px 12px 0 0;z-index:3}
+.modal .mh h2{margin:0;font-size:16.5px}
+.modal .mb{padding:14px 16px;display:grid;grid-template-columns:minmax(260px,430px) 1fr;gap:18px}
+@media(max-width:820px){.modal .mb{grid-template-columns:1fr}}
+.imgbox{position:relative;width:100%;border:1px solid var(--line);background:#eee}
+.imgbox img{display:block;width:100%;height:auto}
+.imgbox svg{position:absolute;inset:0;width:100%;height:100%}
+.imgcol{position:sticky;top:60px;align-self:start}
+.ce{border-collapse:collapse;font-size:12.5px}
+.ce th{padding:1px 6px 1px 0;color:var(--muted);font-weight:500;text-align:right}
+.ce td{padding:1px}
+button.opt{width:27px;height:23px;border:1px solid #c9cfd9;background:#fff;border-radius:5px;font:600 12px inherit;cursor:pointer;padding:0;color:#4a5568}
+button.opt:hover{background:#eef3fc}
+button.opt.on{background:var(--acc);border-color:var(--acc);color:#fff}
+button.opt.on.ok{background:var(--ok);border-color:var(--ok)}
+button.opt.on.bad{background:var(--err);border-color:var(--err)}
+button.opt.key{box-shadow:inset 0 0 0 2px var(--ok)}
+.ce tr.multi td:first-child,.ce tr.multi th{background:var(--warn-l)}
+.cols3{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}
+.cinp{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.cinp div label{font-size:12px;color:var(--muted)}
+.cinp input{padding:5px 7px}
+select.sm{padding:3px 6px;width:auto;font-size:13px}
+.hide{display:none!important}
+@media(max-width:640px){.keyrow{grid-template-columns:1fr}.keyrow .nm{padding-top:0}header.top h1{font-size:18px}}
+
+input.wsc[type=text]{width:150px;text-align:center;font-size:16px;padding:6px 6px;letter-spacing:1px}
+.wst{display:inline-block;min-width:34px;font-weight:700;font-size:13px}
+.wst.ok{color:var(--ok)}.wst.mid{color:var(--warn)}
+details>summary{outline:none}
+
+.ce th.tfh{text-align:left;padding:6px 0 2px;color:var(--ink,#1c2430);font-weight:600}
+.tfinfo{font-weight:400;color:var(--muted)}
+input.tfk{width:100%}
+.tfkeys div{width:112px}
+input.esc[type=text]{width:64px;text-align:center;font-size:16px;padding:6px 4px;letter-spacing:0}
+input.esc.bad{border-color:var(--err);background:#fdecea}
+select.esel{min-width:64px}
+.qe{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+.qe .esl{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)}
+input.flname { flex: 1 1 0; min-width: 0; }
+select.lang { min-width: 110px; }
+
+/* sürətli daxiletmə cədvəli dar ekranda (telefon): şagird və vəziyyət yuxarı sətirdə, rəqəm xanası tam eni ilə aşağıda */
+@media(max-width:640px){
+  table.qt thead{display:none}
+  table.qt,table.qt tbody{display:block}
+  table.qt tr{display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center;padding:8px 10px;border-bottom:1px solid #edf0f4}
+  table.qt td{display:block;padding:0;border:0;white-space:normal}
+  table.qt td:nth-child(2){grid-column:1 / -1;order:3}
+  table.qt td:nth-child(3){order:2;text-align:right}
+}
+
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap" style="padding:0 0 0 0">
+    <h1>İmtahan cavab vərəqlərinin yoxlanması (blok və buraxılış)</h1>
+    <p>Çap olunmuş cavab vərəqlərini telefon şəkli ilə oxuyur və balı imtahan düsturu ilə hesablayır. Tam pulsuzdur, AI və ya kredit istifadə etmir: şəkillər heç bir serverə göndərilmir, hamısı bu səhifənin içində, sizin cihazda işlənir.</p>
+  </div>
+  <nav class="tabs" id="tabs"></nav>
+</header>
+<div class="wrap"><main id="main"></main></div>
+<noscript><p style="padding:20px">Bu səhifənin işləməsi üçün brauzerdə JavaScript aktiv olmalıdır.</p></noscript>
+<script>
+/* ===== Blok imtahanı OMR — əsas modul (düzülüş, çap, oxuma, bal, PDF, XLSX) ===== */
+(function (G) {
+'use strict';
+
+/* ---------- sabitlər ---------- */
+const PW = 210, PH = 297;
+const NS = 3, IDD = 5, CCOLS = 5, NSYM = 12;
+const NC = 22, NK = 5, NW = 3;               // blok quruluşunun sabitləri (yalnız köhnə kod və testlər üçün)
+const MAXRAW = NC + NK + 2 * NW;            // 33 (blok)
+const MAXC = 28, MAXK = 5, MAXW = 15, MAXE = 5;   // bir fənn üçün vərəqə sığan ən çox qapalı / kodlaşdırılan / yazılı / esse tapşırıq
+const MAXROWS = 28;                          // qapalı cədvəlin sətir sayı (qapalı tapşırıq 1 sətir, doğru/yanlış tapşırığı 2 sətir tutur)
+const TFN = 4;                               // doğru/yanlış tapşırığında bənd sayı
+const WVALS = [0, 2, 3, 4, 6];              // yazılı tapşırığın balı altıda bir hissələrlə: 0, 1/3, 1/2, 2/3, 1 (düsturda 2 ilə vurulur)
+const LETTERS = 'ABCDEFGH';
+const SYM = ['-', ',', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+const SYMLBL = ['−', ',', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+const CORN = [[14, 14], [196, 14], [196, 283], [14, 283]];   // TL(halqa), TR, BR, BL
+const CODE = { 1: [1, 1, 0, 0], 2: [1, 0, 1, 0] };
+const CODE_W = [1, 0, 0, 1];                 // yazı səhifələrinin kodu: sayt onları yalnız tanıyır (oxumur), səhvən yüklənərsə keçir
+const CELLS = [0, 1, 2, 3].map(i => ({ x: 130 + 6 * i, y: 59.5, s: 4 }));
+const WBN = { w: 3, e: 12, max: 26 };        // yazı xanaları: yazılı tapşırığa düşən sətir sayı (ilkin), esse üçün (ilkin), bir xanada ən çox sətir
+const FONT = '"Segoe UI",Arial,Helvetica,"DejaVu Sans","Liberation Sans",sans-serif';
+const T_MARK = 0.22, T_WEAK = 0.12;
+const FLX = [124, 152];                      // xarici dil dairələrinin x mövqeyi (mm)
+const range = n => Array.from({ length: n }, (_, i) => i);
+
+/* ---------- konfiqurasiya ---------- */
+/* Xarici dil (1-ci fənn): kitabçada İngilis və Rus dili bölmələri eyni quruluşdadır, şagird birini seçir. Seçim vərəqdəki iki dairə ilə göstərilir,
+   hər dilin açarı ayrıdır (açarın .alt hissəsi 2-ci dilin açarıdır). fl.on = false olarsa bu seçim yoxdur. */
+const FLN = ['İngilis dili', 'Rus dili'];
+const FLT = 'Xarici dil';
+const PRESETS = {
+  blok: { label: 'Blok imtahanı (II mərhələ)', name: 'Blok imtahanı', penalty: true, clampZero: true, wb: { on: false, w: [3, 3, 3], e: 12 },
+    subjects: [{ pat: 'C22 K5 W3', from: 1 }, { pat: 'C22 K5 W3', from: 1 }, { pat: 'C22 K5 W3', from: 1 }] },
+  buraxilis: { label: 'Buraxılış imtahanı, tam orta (11-illik), 85 tapşırıq', name: 'Buraxılış imtahanı', penalty: false, clampZero: false, fl: FLN, wb: { on: true, w: [3, 3, 3], e: 12 },
+    subjects: [{ name: FLT, pat: 'C23 W7', from: 1 }, { name: 'Azərbaycan dili', pat: 'C15 W5 C5 W5', from: 31 }, { name: 'Riyaziyyat', pat: 'C13 K5 W7', from: 61 }] },
+  buraxilis9: { label: 'Buraxılış imtahanı, 81 tapşırıq (xarici dil: İngilis və ya Rus)', name: 'Buraxılış imtahanı', penalty: false, clampZero: false, essayMax: 5, fl: FLN, wb: { on: true, w: [3, 3, 5], e: 12 },
+    subjects: [{ name: FLT, pat: 'C3 T C16 T C3 T E', from: 1 }, { name: 'Azərbaycan dili', pat: 'C15 W5 C5 W5', from: 27 }, { name: 'Riyaziyyat', pat: 'C13 K5 W7', from: 57 }] }
+};
+/* Fənnin tapşırıq sırası: C = qapalı, K = kodlaşdırılan açıq, W = yazılı açıq, T = doğru/yanlış tapşırığı (4 bənd), E = esse; məs.: «C15 W5 C5 W5».
+   Nömrələr kitabçadakı sıra ilə verilir (doğru/yanlış tapşırığı bir nömrə tutur, bəndləri 4.1, 4.2, ... kimi göstərilir). */
+function parsePat(src, from) {
+  const seq = []; const re = /([CKWTEckwte])\s*(\d{0,2})/g; let m;
+  const text = String(src == null ? '' : src);
+  while ((m = re.exec(text)) && seq.length < 120) {
+    const n = m[2] === '' ? 1 : parseInt(m[2], 10);
+    for (let i = 0; i < n && seq.length < 120; i++) seq.push(m[1].toUpperCase());
+  }
+  const r = { seq, nC: 0, nK: 0, nW: 0, nT: 0, nE: 0, numC: [], numK: [], numW: [], numT: [], numE: [], lay: [], rows: 0, capped: false };
+  seq.forEach((t, i) => {
+    const num = from + i;
+    if (t === 'C') { if (r.rows + 1 <= MAXROWS) { r.lay.push({ k: 'C', i: r.nC }); r.nC++; r.numC.push(num); r.rows += 1; } else r.capped = true; }
+    else if (t === 'T') { if (r.rows + 2 <= MAXROWS) { r.lay.push({ k: 'T', i: r.nT }); r.nT++; r.numT.push(num); r.rows += 2; } else r.capped = true; }
+    else if (t === 'K') { if (r.nK < MAXK) { r.nK++; r.numK.push(num); } else r.capped = true; }
+    else if (t === 'E') { if (r.nE < MAXE) { r.nE++; r.numE.push(num); } else r.capped = true; }
+    else { if (r.nW < MAXW) { r.nW++; r.numW.push(num); } else r.capped = true; }
+  });
+  return r;
+}
+function defaultCfg() {
+  const p = PRESETS.blok;
+  return {
+    v: 2, preset: 'blok', name: p.name,
+    subjects: [{ name: '1-ci fənn', coef: 1 }, { name: '2-ci fənn', coef: 1 }, { name: '3-cü fənn', coef: 1 }]
+      .map((s, i) => Object.assign(s, { pat: p.subjects[i].pat, from: p.subjects[i].from })),
+    nOpt: 5, multi: 'wrong', penalty: p.penalty, clampZero: p.clampZero, essayMax: 5,
+    fl: { on: false, n: FLN.slice() },
+    wb: { on: false, w: range(NS).map(() => WBN.w), e: WBN.e },     // yazı xanaları (açıq tapşırıqların cavabı üçün sətirli səhifələr)
+    keys: {}, roster: {}
+  };
+}
+const isNorm = c => !!(c && c.subjects && c.subjects[0] && c.subjects[0].nC != null);
+function normalizeCfg(c) {
+  const d = defaultCfg();
+  const old = !!c && typeof c === 'object' && c.v == null && !!(c.subjects || c.keys || c.name);   // v1 (köhnə) saxlanmış quraşdırma
+  const inFl = c && typeof c === 'object' && c.fl && typeof c.fl === 'object' ? c.fl : null;
+  const inWb = c && typeof c === 'object' && c.wb && typeof c.wb === 'object' ? c.wb : null;
+  c = Object.assign({}, d, c || {});
+  c.v = 2;
+  c.preset = (c.preset === 'buraxilis' || c.preset === 'buraxilis9' || c.preset === 'custom') ? c.preset : 'blok';
+  c.essayMax = Number(c.essayMax) > 0 ? Math.min(20, Math.round(Number(c.essayMax) * 2) / 2) : 5;
+  // xarici dil seçimi: saxlanmış quraşdırmada göstərilməyibsə, buraxılış quruluşlarında açıq, qalanlarda bağlı götürülür
+  c.fl = {
+    on: inFl && inFl.on != null ? !!inFl.on : (c.preset === 'buraxilis' || c.preset === 'buraxilis9'),
+    n: range(2).map(i => { const t = String(inFl && inFl.n && inFl.n[i] != null ? inFl.n[i] : '').replace(/\s+/g, ' ').trim().slice(0, 28); return t || FLN[i]; })
+  };
+  // yazı xanaları: saxlanmış quraşdırmada göstərilməyibsə, buraxılış quruluşlarında açıq, blokda bağlı götürülür
+  const wbLines = (v, def) => { v = parseInt(v, 10); return Number.isFinite(v) ? Math.max(0, Math.min(WBN.max, v)) : def; };
+  const pw = PRESETS[c.preset] && PRESETS[c.preset].wb;
+  c.wb = {
+    on: inWb && inWb.on != null ? !!inWb.on : !!(pw && pw.on),
+    w: range(NS).map(i => wbLines(inWb && Array.isArray(inWb.w) ? inWb.w[i] : undefined, pw ? pw.w[i] : WBN.w)),
+    e: wbLines(inWb ? inWb.e : undefined, pw ? pw.e : WBN.e)
+  };
+  c.subjects = range(NS).map(i => {
+    const s = Object.assign({}, d.subjects[i], (c.subjects || [])[i] || {});
+    s.coef = Number(s.coef) > 0 ? Number(s.coef) : 1;
+    s.name = String(s.name || d.subjects[i].name);
+    if (i === 0 && c.fl.on) s.name = FLT;
+    s.from = Math.max(1, Math.min(999, parseInt(s.from, 10) || 1));
+    let P = parsePat(s.pat, s.from);
+    if (!P.seq.length) { s.pat = d.subjects[i].pat; P = parsePat(s.pat, s.from); }
+    s.nC = P.nC; s.nK = P.nK; s.nW = P.nW; s.nT = P.nT; s.nE = P.nE; s.numC = P.numC; s.numK = P.numK; s.numW = P.numW; s.numT = P.numT; s.numE = P.numE;
+    s.lay = P.lay; s.rows = P.rows; s.capped = P.capped;
+    s.maxRaw = P.nC + P.nK + 2 * P.nW + P.nT + P.nE * c.essayMax;
+    return s;
+  });
+  c.nOpt = c.nOpt === 4 ? 4 : 5;
+  c.multi = c.multi === 'blank' ? 'blank' : 'wrong';
+  c.penalty = c.penalty !== false;
+  c.clampZero = old ? true : !!c.clampZero;   // DİM düsturu: qapalı hissənin balı mənfi çıxarsa 0 götürülür
+  c.keys = c.keys || {};
+  c.roster = c.roster || {};
+  return c;
+}
+function emptyKey(cfg) {
+  const sj = (isNorm(cfg) ? cfg : normalizeCfg(cfg)).subjects;
+  const s0 = sj[0];
+  return { closed: sj.map(s => Array(s.nC).fill(-1)), coded: sj.map(s => Array(s.nK).fill('')), tf: sj.map(s => range(s.nT).map(() => Array(TFN).fill(-1))),
+    alt: { closed: [Array(s0.nC).fill(-1)], coded: [Array(s0.nK).fill('')], tf: [range(s0.nT).map(() => Array(TFN).fill(-1))] } };   // 2-ci xarici dilin açarı (yalnız 1-ci fənn üçün)
+}
+/* açarı yeni quruluşa uyğunlaşdır (artıq xanaları kəs, çatmayanları boş doldur) */
+function fitKey(key, cfg) {
+  const out = emptyKey(cfg);
+  if (!key) return out;
+  out.closed = out.closed.map((a, s) => a.map((_, q) => { const v = key.closed && key.closed[s] ? key.closed[s][q] : -1; return v == null ? -1 : v; }));
+  out.coded = out.coded.map((a, s) => a.map((_, t) => { const v = key.coded && key.coded[s] ? key.coded[s][t] : ''; return v == null ? '' : v; }));
+  out.tf = out.tf.map((a, s) => a.map((blk, t) => blk.map((_, j) => { const v = key.tf && key.tf[s] && key.tf[s][t] ? key.tf[s][t][j] : -1; return v === 0 || v === 1 ? v : -1; })));
+  const al = key.alt || {};
+  out.alt.closed[0] = out.alt.closed[0].map((_, q) => { const v = al.closed && al.closed[0] ? al.closed[0][q] : -1; return v == null ? -1 : v; });
+  out.alt.coded[0] = out.alt.coded[0].map((_, t) => { const v = al.coded && al.coded[0] ? al.coded[0][t] : ''; return v == null ? '' : v; });
+  out.alt.tf[0] = out.alt.tf[0].map((blk, t) => blk.map((_, j) => { const v = al.tf && al.tf[0] && al.tf[0][t] ? al.tf[0][t][j] : -1; return v === 0 || v === 1 ? v : -1; }));
+  return out;
+}
+/* şagirdin seçdiyi xarici dilə görə effektiv açar: 2-ci dil seçilibsə 1-ci fənnin açarı .alt-dan götürülür, digər fənlər ortaqdır.
+   2-ci dilin açarı yoxdursa boş açar qaytarılır (1-ci dilin açarı səhvən işlənməsin). */
+function effKey(cfg, v, lang) {
+  const key = cfg && cfg.keys ? cfg.keys[v] : null;
+  if (!key) return null;
+  if (!(cfg.fl && cfg.fl.on) || lang !== 1) return key;
+  const al = key.alt || {}, s0 = cfg.subjects[0];
+  return {
+    closed: [al.closed && al.closed[0] ? al.closed[0] : Array(s0.nC).fill(-1)].concat(key.closed.slice(1)),
+    coded: [al.coded && al.coded[0] ? al.coded[0] : Array(s0.nK).fill('')].concat(key.coded.slice(1)),
+    tf: [al.tf && al.tf[0] ? al.tf[0] : range(s0.nT).map(() => Array(TFN).fill(-1))].concat((key.tf || []).slice(1))
+  };
+}
+const sigOf = cfg => JSON.stringify(cfg.subjects.map(s => [s.nC, s.nK, s.nW]).concat(cfg.subjects.some(s => s.nT || s.nE) ? [cfg.subjects.map(s => [s.nT, s.nE])] : []).concat(cfg.fl && cfg.fl.on ? ['fl'] : []));
+const pageCount = cfg => cfg.subjects.some(s => s.nK > 0) ? 2 : 1;       // oxunan (dairəli) səhifələrin sayı
+
+/* ---------- yazı səhifələri (açıq tapşırıqların cavabı üçün nömrəli, sətirli xanalar; saytda oxunmur) ---------- */
+const WB = { x0: 24, x1: 186, top: 72, bot: 277, step: 7, l1: 8.5, pad: 2.4, up: 2.5, gap: 2.5, band: 7.5, bandGap: 3, tabW: 11, tabH: 5 };
+const wbBoxH = n => WB.l1 + (n - 1) * WB.step + WB.pad;
+/* yazılı (W) və esse (E) tapşırıqlar fənn-fənn, kitabçadakı nömrə sırası ilə */
+function writeItems(cfg) {
+  const out = [];
+  if (!cfg.wb) return out;
+  cfg.subjects.forEach((S, s) => {
+    const it = [];
+    const nw = cfg.wb.w[s] | 0, ne = cfg.wb.e | 0;
+    if (nw > 0) S.numW.forEach(num => it.push({ s, t: 'W', num, n: nw }));
+    if (ne > 0) S.numE.forEach(num => it.push({ s, t: 'E', num, n: ne }));
+    it.sort((a, b) => a.num - b.num);
+    out.push(...it);
+  });
+  return out;
+}
+/* xanaları səhifələrə böl: hər səhifədə fənn zolağı (başlıq) və onun xanaları; fənn səhifə sonuna sığmırsa növbəti səhifədə «davamı» zolağı çıxır */
+function writePlan(cfg) {
+  if (!cfg.wb || !cfg.wb.on) return [];
+  const pages = [];
+  let cur = null, y = 0, curS = -1;
+  for (const it of writeItems(cfg)) {
+    const h = wbBoxH(it.n);
+    let band = !cur || it.s !== curS, cont = false;
+    if (cur && y + (band ? WB.band + WB.bandGap : 0) + WB.up + h > WB.bot) { cur = null; cont = !band; band = true; }
+    if (!cur) { cur = { bands: [], boxes: [] }; pages.push(cur); y = WB.top; }
+    if (band) { cur.bands.push({ s: it.s, y, cont }); y += WB.band + WB.bandGap; curS = it.s; }
+    cur.boxes.push({ s: it.s, t: it.t, num: it.num, n: it.n, y: y + WB.up, h });
+    y += WB.up + h + WB.gap;
+  }
+  return pages;
+}
+const writePageCount = cfg => writePlan(cfg).length;
+const totalPages = cfg => pageCount(cfg) + writePageCount(cfg);
+
+/* ---------- düzülüş (mm) ---------- */
+function anchorList() {
+  const a = [];
+  for (let k = 1; k <= 9; k++) { const y = 14 + 269 * k / 10; a.push({ x: 14, y, e: 'L' }, { x: 196, y, e: 'R' }); }
+  for (let k = 1; k <= 5; k++) { const x = 14 + 182 * k / 6; a.push({ x, y: 14, e: 'T' }, { x, y: 283, e: 'B' }); }
+  return a;
+}
+const ANCHORS = anchorList();
+
+function buildPages(cfg) {
+  if (!isNorm(cfg)) cfg = normalizeCfg(cfg);
+  const pages = [], nO = pageCount(cfg), plan = writePlan(cfg), np = nO + plan.length;
+  for (let pn = 1; pn <= nO; pn++) {
+    const P = { groups: [], texts: [], cells: [], lines: [], rects: [] };
+    header(P, pn, cfg, np);
+    if (pn === 1) page1(P, cfg); else page2(P, cfg);
+    P.texts.push({ x: 105, y: 291.5, s: 2.2, a: 'c', t: 'v1 · ' + cfg.nOpt + ' variantlı · Səhifə ' + pn + '/' + np, gray: 1 });
+    pages.push(P);
+  }
+  plan.forEach((wp, i) => pages.push(writePage(cfg, nO + i + 1, np, wp)));
+  return pages;
+}
+
+/* Azərbaycan əlifbasına uyğun böyük hərflər (i → İ, ı → I) */
+const upAz = t => String(t).replace(/i/g, 'İ').replace(/ı/g, 'I').toUpperCase();
+function writePage(cfg, pn, np, wp) {
+  const P = { groups: [], texts: [], cells: [], lines: [], rects: [], write: true };
+  P.texts.push({ x: 24, y: 26, s: 4.2, b: 1, t: (cfg.name || 'İmtahan') + ' — cavab vərəqi (yazı hissəsi)', max: 135 });
+  P.texts.push({ x: 186, y: 26, s: 3.4, b: 1, a: 'r', t: 'Səhifə ' + pn + '/' + np });
+  P.texts.push({ x: 24, y: 31.2, s: 2.5, t: 'Açıq tapşırıqların cavabını nömrəsinə uyğun xanada qara və ya tünd göy qələmlə aydın yazın. Bu səhifədə dairə boyamayın.', max: 162 });
+  P.texts.push({ x: 24, y: 41, s: 2.8, t: 'Ad, soyad:' });
+  P.lines.push({ x1: 45, y1: 41.4, x2: 150, y2: 41.4, w: 0.25 });
+  P.texts.push({ x: 156, y: 41, s: 2.8, t: 'Variant:' });
+  P.rects.push({ x: 171, y: 37.4, w: 7, h: 5.8, lw: 0.25 });
+  P.texts.push({ x: 24, y: 51.4, s: 2.8, t: 'Şagird nömrəsi:' });
+  for (let i = 0; i < IDD; i++) P.rects.push({ x: 55 + 7.4 * i, y: 46.6, w: 6.4, h: 6.6, lw: 0.25 });
+  P.texts.push({ x: 100, y: 61, s: 2.4, t: 'Səhifə kodu' });
+  P.cells = CELLS.map((c, i) => ({ x: c.x, y: c.y, s: c.s, on: CODE_W[i] }));
+  P.texts.push({ x: 154, y: 61, s: 2.2, gray: 1, t: 'yazı səhifəsi, saytda oxunmur', max: 34 });
+  for (const b of wp.bands) {
+    P.rects.push({ x: WB.x0, y: b.y, w: WB.x1 - WB.x0, h: WB.band, fill: '#d4d4d4' });
+    P.texts.push({ x: WB.x0 + 3, y: b.y + 5.3, s: 3.7, b: 1, t: upAz(cfg.subjects[b.s].name) + (b.cont ? ' (davamı)' : ''), max: 120 });
+    P.texts.push({ x: WB.x1 - 3, y: b.y + 5.1, s: 2.4, a: 'r', t: 'açıq tapşırıqların cavabları', c: '#333' });
+  }
+  for (const bx of wp.boxes) {
+    P.rects.push({ x: WB.x0, y: bx.y, w: WB.x1 - WB.x0, h: bx.h, lw: 0.35 });
+    for (let k = 0; k < bx.n; k++) { const y = bx.y + WB.l1 + k * WB.step; P.lines.push({ x1: WB.x0 + 3, y1: y, x2: WB.x1 - 3, y2: y, w: 0.18, c: '#8c8c8c' }); }
+    const tw = bx.t === 'E' ? 21 : WB.tabW;
+    P.rects.push({ x: WB.x0 + 3, y: bx.y - WB.up, w: tw, h: WB.tabH, fill: '#3a3a3a' });      // nömrə nişanı
+    P.texts.push({ x: WB.x0 + 3 + tw / 2, y: bx.y - WB.up + 3.7, s: 3.5, b: 1, a: 'c', c: '#fff', t: bx.t === 'E' ? bx.num + ' · esse' : String(bx.num) });
+  }
+  P.texts.push({ x: 105, y: 291.5, s: 2.2, a: 'c', t: 'v1 · ' + cfg.nOpt + ' variantlı · Səhifə ' + pn + '/' + np, gray: 1 });
+  return P;
+}
+
+function header(P, pn, cfg, np) {
+  P.texts.push({ x: 24, y: 26, s: 4.2, b: 1, t: (cfg.name || 'İmtahan') + ' — cavab vərəqi', max: 135 });
+  P.texts.push({ x: 186, y: 26, s: 3.4, b: 1, a: 'r', t: 'Səhifə ' + pn + '/' + np });
+  P.texts.push({ x: 24, y: 31.2, s: 2.5, t: 'Cavabları qara qələm və ya yumşaq karandaşla dairəni tam boyayaraq işarələyin. Səhv işarəni silgi ilə təmiz silin.', max: 162 });
+  P.texts.push({ x: 24, y: 37.5, s: 3, b: 1, t: 'Şagird nömrəsi' });
+  for (let j = 0; j < 10; j++) P.texts.push({ x: 30 + 6.2 * j, y: 42, s: 2.6, a: 'c', t: String(j) });
+  for (let i = 0; i < IDD; i++) {
+    const y = 46 + 6 * i;
+    P.texts.push({ x: 26, y: y + 0.9, s: 2.6, a: 'c', t: String(i + 1) });
+    P.groups.push({ t: 'id', a: i, bub: range(10).map(j => ({ x: 30 + 6.2 * j, y, r: 2.2 })) });
+  }
+  P.texts.push({ x: 100, y: 37.5, s: 3, b: 1, t: 'Variant' });
+  for (let i = 0; i < 4; i++) P.texts.push({ x: 112 + 11 * i, y: 42, s: 2.8, a: 'c', t: LETTERS[i] });
+  P.groups.push({ t: 'var', bub: range(4).map(i => ({ x: 112 + 11 * i, y: 46, r: 2.6 })) });
+  if (pn === 1 && cfg.fl && cfg.fl.on) {          // xarici dil: şagird iki dairədən birini boyayır
+    P.texts.push({ x: 100, y: 54.8, s: 3, b: 1, t: 'Xarici dil' });
+    cfg.fl.n.forEach((nm, i) => P.texts.push({ x: FLX[i] + 4.2, y: 54.8, s: 2.8, t: nm, max: 24 }));
+    P.groups.push({ t: 'fl', bub: FLX.map(x => ({ x, y: 53.8, r: 2.6 })) });
+  }
+  P.texts.push({ x: 100, y: 61, s: 2.4, t: 'Səhifə kodu' });
+  P.cells = CELLS.map((c, i) => ({ x: c.x, y: c.y, s: c.s, on: CODE[pn][i] }));
+  P.texts.push({ x: 100, y: 71, s: 2.8, t: 'Ad, soyad:' });
+  P.lines.push({ x1: 121, y1: 71.4, x2: 186, y2: 71.4, w: 0.25 });
+}
+
+/* yoxlayıcı xanaları (yazılı bal) yalnız qapalı ≤ 22 və hər fənndə yazılı ≤ 3 olduqda vərəqdə çıxır; əks halda ballar saytda daxil edilir */
+function teacherBlock(cfg) { return cfg.subjects.every(s => s.rows <= 22 && s.nW <= 3) && cfg.subjects.some(s => s.nW > 0); }
+/* Yoxlayıcı bal dairələri 2-ci səhifədə (buraxılış və s.): 1-ci səhifədə yer yoxdursa və 2-ci səhifə varsa, kodlaşdırılan tapşırıqların altında.
+   Yazılı tapşırığın balı: 0, ⅓, ½, ⅔, 1 (5 dairə, WVALS sırası ilə). Esse: 0-dan essayMax-a qədər yarım ballarla (≤ 12 dairə, 2 sətirdə). Yer çatmırsa null (ballar saytda daxil edilir). */
+const SBX = [24, 78, 132];                                   // fənn sütunlarının sol kənarı (mm)
+const SB = { title: 3.6, sub: 8.4, name: 15.2, lbl: 20.8, row0: 26, step: 6.6, eH: 22, bot: 277, eMax: 5.5 };
+const WSLBL = ['0', '⅓', '½', '⅔', '1'];
+function scoreBlock2(cfg) {
+  if (teacherBlock(cfg) || pageCount(cfg) < 2) return null;
+  const S = cfg.subjects;
+  const yb = 78 + 66 * S.filter(s => s.nK > 0).length + 7;       // kod xanalarından ≥ 8 mm aşağıda (əyri şəkildə başlıq mürəkkəbi oxunmasın)
+  const build = eOk => {
+    let any = false, bottom = yb;
+    const cols = S.map(s => {
+      const nW = s.nW, nE = eOk ? s.nE : 0;
+      if (!nW && !nE) return null;
+      any = true;
+      let y = yb + SB.row0;
+      const w = range(nW).map(() => { const v = y; y += SB.step; return v; });
+      if (nW) bottom = Math.max(bottom, w[nW - 1] + 3);
+      const e = [];
+      if (nE) { if (nW) y += 3; for (let k = 0; k < nE; k++) { e.push(y); y += SB.eH; } bottom = Math.max(bottom, e[nE - 1] + 17); }
+      return { w, e };
+    });
+    return !any || bottom > SB.bot ? null : { yb, cols, nEb: Math.round(cfg.essayMax * 2) + 1 };
+  };
+  // esse dairələri (0–5,5 bal) sığmırsa, yalnız yazılı dairələr çəkilir; esse balı saytda daxil edilir
+  return (cfg.essayMax <= SB.eMax && build(true)) || build(false);
+}
+function page1(P, cfg) {
+  const x0s = [24, 78, 132];
+  for (let s = 0; s < NS; s++) {
+    const x0 = x0s[s], S = cfg.subjects[s];
+    P.texts.push({ x: x0, y: 80, s: 3.4, b: 1, t: S.name, max: 52 });
+    if (!S.rows) continue;
+    for (let o = 0; o < cfg.nOpt; o++) P.texts.push({ x: x0 + 12 + 8 * o, y: 86, s: 2.8, a: 'c', t: LETTERS[o] });
+    if (S.nT) P.texts.push({ x: x0, y: 83.2, s: 2.1, gray: 1, t: 'Doğru/yanlış: sol dairə = doğru, sağ dairə = yanlış', max: 52 });
+    let r = 0;
+    for (const L of S.lay) {
+      if (L.k === 'C') {
+        const y = 92 + 6.6 * r;
+        P.texts.push({ x: x0 + 6.2, y: y + 1, s: 2.7, a: 'r', t: String(S.numC[L.i]) });
+        P.groups.push({ t: 'cl', a: s, b: L.i, bub: range(cfg.nOpt).map(o => ({ x: x0 + 12 + 8 * o, y, r: 2.4 })) });
+        r += 1;
+      } else {
+        for (let j = 0; j < TFN; j++) {
+          const y = 92 + 6.6 * (r + (j >> 1)), side = j & 1, lab = S.numT[L.i] + '.' + (j + 1);
+          if (side === 0) P.texts.push({ x: x0 + 6.2, y: y + 1, s: 2.4, a: 'r', t: lab });
+          else P.texts.push({ x: x0 + 28, y: y + 1, s: 2.4, a: 'c', t: lab });
+          const bx = side === 0 ? [x0 + 12, x0 + 20] : [x0 + 36, x0 + 44];
+          P.groups.push({ t: 'tf', a: s, b: L.i, c: j, bub: bx.map(x => ({ x, y, r: 2.4 })) });
+        }
+        r += 2;
+      }
+    }
+  }
+  if (!teacherBlock(cfg)) return;
+  P.texts.push({ x: 24, y: 241, s: 3, b: 1, t: 'Yoxlayıcı üçün — yazılı tapşırıqların balı (hər birinə 0, 1 və ya 2):', max: 162 });
+  for (let s = 0; s < NS; s++) {
+    const S = cfg.subjects[s], y = 249 + 9 * s;
+    P.texts.push({ x: 24, y: y + 1, s: 2.8, b: 1, t: S.name, max: 34 });
+    for (let t = 0; t < S.nW; t++) {
+      const bx = 64 + 42 * t;
+      P.texts.push({ x: bx, y: y + 1, s: 2.7, a: 'r', t: String(S.numW[t]) });
+      for (let v = 0; v < 3; v++) P.texts.push({ x: bx + 6 + 8 * v, y: y + 5.6, s: 2.2, a: 'c', t: String(v) });
+      P.groups.push({ t: 'wr', a: s, b: t, bub: range(3).map(v => ({ x: bx + 6 + 8 * v, y, r: 2.2 })) });
+    }
+  }
+}
+
+function page2(P, cfg) {
+  let band = 0;
+  for (let s = 0; s < NS; s++) {
+    const S = cfg.subjects[s];
+    if (!S.nK) continue;
+    const y0 = 78 + 66 * band++;
+    P.texts.push({ x: 24, y: y0 + 2.5, s: 3.4, b: 1, t: S.name + ' — kodlaşdırılan tapşırıqlar', max: 150 });
+    for (let t = 0; t < S.nK; t++) {
+      const gx = 29 + 30.2 * t;
+      P.texts.push({ x: gx + 2 * 5.4, y: y0 + 7.2, s: 3, b: 1, a: 'c', t: String(S.numK[t]) });
+      for (let c = 0; c < CCOLS; c++)
+        P.groups.push({ t: 'cd', a: s, b: t, c, bub: range(NSYM).map(r => ({ x: gx + 5.4 * c, y: y0 + 11 + 4.7 * r, r: 1.75 })) });
+    }
+    for (let r = 0; r < NSYM; r++) {
+      const y = y0 + 11 + 4.7 * r + 1;
+      P.texts.push({ x: 26.5, y, s: r < 2 ? 3.6 : 2.7, b: r < 2 ? 1 : 0, a: 'r', t: SYMLBL[r] });
+      P.texts.push({ x: 176.5, y, s: r < 2 ? 3.6 : 2.7, b: r < 2 ? 1 : 0, a: 'l', t: SYMLBL[r] });
+    }
+  }
+  const L = scoreBlock2(cfg);
+  if (L) {
+    const hasE = L.cols.some(c => c && c.e.length);
+    P.texts.push({ x: 24, y: L.yb + SB.title, s: 3.4, b: 1, t: 'Yoxlayıcı üçün — açıq tapşırıqların balı', max: 162 });
+    P.texts.push({ x: 24, y: L.yb + SB.sub, s: 2.4, gray: 1, t: 'Hər tapşırığa verilən balı bir dairəni boyayaraq göstərin: 0, ⅓, ½, ⅔ və ya 1 (tam bal).' + (hasE ? ' Esse: 0-dan ' + String(cfg.essayMax).replace('.', ',') + '-ə qədər, yarım ballarla.' : ''), max: 162 });
+    for (let s = 0; s < NS; s++) {
+      const c = L.cols[s]; if (!c) continue;
+      const x0 = SBX[s], S = cfg.subjects[s];
+      P.texts.push({ x: x0, y: L.yb + SB.name, s: 3.2, b: 1, t: S.name, max: 52 });
+      if (c.w.length) {
+        for (let o = 0; o < 5; o++) P.texts.push({ x: x0 + 12 + 8 * o, y: L.yb + SB.lbl, s: 2.8, a: 'c', t: WSLBL[o] });
+        c.w.forEach((y, t) => {
+          P.texts.push({ x: x0 + 6.2, y: y + 1, s: 2.7, a: 'r', t: String(S.numW[t]) });
+          P.groups.push({ t: 'ws', a: s, b: t, bub: range(5).map(o => ({ x: x0 + 12 + 8 * o, y, r: 2.4 })) });
+        });
+      }
+      c.e.forEach((y, k) => {
+        P.texts.push({ x: x0 + 6.2, y: y + 1, s: 2.7, a: 'r', t: String(S.numE[k]) });
+        P.texts.push({ x: x0 + 6.2, y: y + 5, s: 2.1, a: 'r', t: 'esse' });
+        const bub = range(L.nEb).map(i => ({ x: x0 + 12 + 7.2 * (i % 6), y: y + (i >= 6 ? 10.6 : 0), r: 2.4 }));
+        bub.forEach((b, i) => P.texts.push({ x: b.x, y: b.y + 5.6, s: 2.1, a: 'c', t: String(i / 2).replace('.', ',') }));
+        P.groups.push({ t: 'es', a: s, b: k, bub });
+      });
+    }
+  }
+}
+
+/* ---------- çap (canvas) ---------- */
+function mkCanvas(w, h) {
+  if (typeof document !== 'undefined') { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+  return new OffscreenCanvas(w, h);
+}
+function drawText(ctx, t) {
+  let size = t.s;
+  const font = sz => (t.b ? 'bold ' : '') + sz + 'px ' + FONT;
+  ctx.font = font(size);
+  let txt = t.t;
+  if (t.max) {
+    let w = ctx.measureText(txt).width;
+    if (w > t.max) { size = Math.max(size * 0.62, size * t.max / w); ctx.font = font(size); w = ctx.measureText(txt).width; }
+    while (w > t.max && txt.length > 3) { txt = txt.slice(0, -2); w = ctx.measureText(txt + '…').width; if (w <= t.max) txt += '…'; }
+  }
+  ctx.fillStyle = t.c || (t.gray ? '#666' : '#000');
+  ctx.textAlign = t.a === 'c' ? 'center' : t.a === 'r' ? 'right' : 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText(txt, t.x, t.y);
+}
+function renderPage(cfg, pn, ppm) {
+  const P = buildPages(cfg)[pn - 1];
+  const cv = mkCanvas(Math.round(PW * ppm), Math.round(PH * ppm));
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.save(); ctx.scale(ppm, ppm);
+  ctx.fillStyle = '#000';
+  CORN.forEach(([x, y], i) => {
+    ctx.fillRect(x - 5, y - 5, 10, 10);
+    if (i === 0) { ctx.fillStyle = '#fff'; ctx.fillRect(x - 2, y - 2, 4, 4); ctx.fillStyle = '#000'; }
+  });
+  ANCHORS.forEach(a => ctx.fillRect(a.x - 2, a.y - 2, 4, 4));
+  ctx.strokeStyle = '#111'; ctx.lineWidth = 0.3;
+  for (const g of P.groups) for (const b of g.bub) { ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.stroke(); }
+  for (const c of P.cells) {
+    if (c.on) { ctx.fillStyle = '#000'; ctx.fillRect(c.x - c.s / 2, c.y - c.s / 2, c.s, c.s); }
+    else { ctx.lineWidth = 0.25; ctx.strokeRect(c.x - c.s / 2, c.y - c.s / 2, c.s, c.s); }
+  }
+  for (const r of P.rects || []) {
+    if (r.fill) { ctx.fillStyle = r.fill; ctx.fillRect(r.x, r.y, r.w, r.h); }
+    if (r.lw) { ctx.strokeStyle = r.c || '#111'; ctx.lineWidth = r.lw; ctx.strokeRect(r.x, r.y, r.w, r.h); }
+  }
+  ctx.lineWidth = 0.3;
+  for (const l of P.lines) { ctx.strokeStyle = l.c || '#111'; ctx.lineWidth = l.w; ctx.beginPath(); ctx.moveTo(l.x1, l.y1); ctx.lineTo(l.x2, l.y2); ctx.stroke(); }
+  for (const t of P.texts) drawText(ctx, t);
+  ctx.restore();
+  return cv;
+}
+
+/* ---------- riyazi köməkçilər ---------- */
+function solveLinear(A, b) {
+  const n = b.length; const M = A.map((r, i) => r.concat([b[i]]));
+  for (let c = 0; c < n; c++) {
+    let p = c; for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r;
+    if (Math.abs(M[p][c]) < 1e-12) return null;
+    const tmp = M[c]; M[c] = M[p]; M[p] = tmp;
+    for (let r = c + 1; r < n; r++) { const f = M[r][c] / M[c][c]; for (let k = c; k <= n; k++) M[r][k] -= f * M[c][k]; }
+  }
+  const x = new Array(n);
+  for (let r = n - 1; r >= 0; r--) { let s = M[r][n]; for (let k = r + 1; k < n; k++) s -= M[r][k] * x[k]; x[r] = s / M[r][r]; }
+  return x;
+}
+function solveH(src, dst) {
+  const A = [], b = [];
+  for (let i = 0; i < 4; i++) {
+    const [x, y] = src[i], [u, v] = dst[i];
+    A.push([x, y, 1, 0, 0, 0, -u * x, -u * y]); b.push(u);
+    A.push([0, 0, 0, x, y, 1, -v * x, -v * y]); b.push(v);
+  }
+  const h = solveLinear(A, b); if (!h) return null;
+  return [h[0], h[1], h[2], h[3], h[4], h[5], h[6], h[7], 1];
+}
+function applyH(H, x, y) { const d = H[6] * x + H[7] * y + H[8]; return [(H[0] * x + H[1] * y + H[2]) / d, (H[3] * x + H[4] * y + H[5]) / d]; }
+function polyArea(p) { let a = 0; for (let i = 0; i < p.length; i++) { const q = p[(i + 1) % p.length]; a += p[i][0] * q[1] - q[0] * p[i][1]; } return Math.abs(a) / 2; }
+const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+
+/* ---------- şəkil analizi ---------- */
+function binarize(gray, w, h) {
+  const win = Math.max(24, Math.round(Math.min(w, h) / 10));
+  const iw = w + 1;
+  const integ = new Uint32Array(iw * (h + 1));
+  for (let y = 0; y < h; y++) {
+    let row = 0; const o = (y + 1) * iw, p = y * iw;
+    for (let x = 0; x < w; x++) { row += gray[y * w + x]; integ[o + x + 1] = integ[p + x + 1] + row; }
+  }
+  const mask = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) {
+    const y0 = Math.max(0, y - win), y1 = Math.min(h - 1, y + win);
+    const r0 = y0 * iw, r1 = (y1 + 1) * iw;
+    for (let x = 0; x < w; x++) {
+      const x0 = Math.max(0, x - win), x1 = Math.min(w - 1, x + win);
+      const sum = integ[r1 + x1 + 1] - integ[r0 + x1 + 1] - integ[r1 + x0] + integ[r0 + x0];
+      const mean = sum / ((x1 - x0 + 1) * (y1 - y0 + 1));
+      const g = gray[y * w + x]; if (g < mean * 0.78 && mean - g > 38) mask[y * w + x] = 1;
+    }
+  }
+  return mask;
+}
+function labelComps(mask, w, h, minA) {
+  const stack = new Int32Array(w * h);
+  const comps = [];
+  for (let y0 = 0; y0 < h; y0++) {
+    for (let x0 = 0; x0 < w; x0++) {
+      const i0 = y0 * w + x0;
+      if (mask[i0] !== 1) continue;
+      let sp = 0; stack[sp++] = i0; mask[i0] = 2;
+      let area = 0, sx = 0, sy = 0, sxx = 0, syy = 0, sxy = 0, minx = x0, maxx = x0, miny = y0, maxy = y0;
+      while (sp) {
+        const i = stack[--sp]; const y = (i / w) | 0, x = i - y * w;
+        area++; sx += x; sy += y; sxx += x * x; syy += y * y; sxy += x * y;
+        if (x < minx) minx = x; if (x > maxx) maxx = x; if (y < miny) miny = y; if (y > maxy) maxy = y;
+        if (x > 0 && mask[i - 1] === 1) { mask[i - 1] = 2; stack[sp++] = i - 1; }
+        if (x < w - 1 && mask[i + 1] === 1) { mask[i + 1] = 2; stack[sp++] = i + 1; }
+        if (y > 0 && mask[i - w] === 1) { mask[i - w] = 2; stack[sp++] = i - w; }
+        if (y < h - 1 && mask[i + w] === 1) { mask[i + w] = 2; stack[sp++] = i + w; }
+      }
+      if (area >= minA) {
+        const cx = sx / area, cy = sy / area;
+        const vxx = sxx / area - cx * cx, vyy = syy / area - cy * cy, vxy = sxy / area - cx * cy;
+        const tr = vxx + vyy, det = vxx * vyy - vxy * vxy;
+        const disc = Math.sqrt(Math.max(0, tr * tr / 4 - det));
+        const l1 = tr / 2 + disc, l2 = Math.max(1e-6, tr / 2 - disc);
+        comps.push({
+          area, cx, cy, minx, maxx, miny, maxy,
+          elong: Math.sqrt(l1 / l2),
+          sq: area / (12 * Math.sqrt(Math.max(1e-6, l1 * l2)))
+        });
+      }
+    }
+  }
+  return comps;
+}
+function interp(list, t) {
+  if (!list.length) return [0, 0];
+  if (t <= list[0].t) return [list[0].dx, list[0].dy];
+  for (let i = 1; i < list.length; i++) {
+    if (t <= list[i].t) {
+      const a = list[i - 1], b = list[i]; const f = (t - a.t) / ((b.t - a.t) || 1);
+      return [a.dx + f * (b.dx - a.dx), a.dy + f * (b.dy - a.dy)];
+    }
+  }
+  const l = list[list.length - 1]; return [l.dx, l.dy];
+}
+function makeMap(H0, resid) {
+  const c = resid.c;                 // 4 künc nöqtəsinin qalığı [TL, TR, BR, BL] (yalnız ehtiyat yolda; əsas yolda sıfırdır)
+  return function (x, y) {
+    const p = applyH(H0, x, y);
+    const u = (x - 14) / 182, v = (y - 14) / 269;
+    const l = interp(resid.L, y), r = interp(resid.R, y), t = interp(resid.T, x), b = interp(resid.B, x);
+    let dx = (1 - u) * l[0] + u * r[0] + (1 - v) * t[0] + v * b[0];
+    let dy = (1 - u) * l[1] + u * r[1] + (1 - v) * t[1] + v * b[1];
+    if (c) {
+      const w0 = (1 - u) * (1 - v), w1 = u * (1 - v), w2 = u * v, w3 = (1 - u) * v;
+      dx -= w0 * c[0][0] + w1 * c[1][0] + w2 * c[2][0] + w3 * c[3][0];
+      dy -= w0 * c[0][1] + w1 * c[1][1] + w2 * c[2][1] + w3 * c[3][1];
+    }
+    return [p[0] + dx, p[1] + dy];
+  };
+}
+
+/* bir bubble-ın mürəkkəb səviyyəsi (0..1) */
+const _hist = new Uint16Array(256);
+function discMean(gray, w, h, cx, cy, r) {
+  const x0 = Math.max(0, Math.ceil(cx - r)), x1 = Math.min(w - 1, Math.floor(cx + r));
+  const y0 = Math.max(0, Math.ceil(cy - r)), y1 = Math.min(h - 1, Math.floor(cy + r));
+  const r2 = r * r; let s = 0, n = 0;
+  for (let y = y0; y <= y1; y++) {
+    const dy = y - cy, dy2 = dy * dy, row = y * w;
+    for (let x = x0; x <= x1; x++) { const dx = x - cx; if (dx * dx + dy2 <= r2) { s += gray[row + x]; n++; } }
+  }
+  return n ? s / n : 255;
+}
+function measure(img, px, py, rmm, s) {
+  const { w, h, gray } = img;
+  const R = rmm * s;
+  const rIn = Math.max(2.2, 0.55 * R), a0 = 1.5 * R, a1 = 2.0 * R;
+  _hist.fill(0); let cnt = 0;
+  const xa = Math.max(0, Math.floor(px - a1)), xb = Math.min(w - 1, Math.ceil(px + a1));
+  const ya = Math.max(0, Math.floor(py - a1)), yb = Math.min(h - 1, Math.ceil(py + a1));
+  const a0s = a0 * a0, a1s = a1 * a1;
+  for (let y = ya; y <= yb; y++) {
+    const dy = y - py, dy2 = dy * dy, row = y * w;
+    for (let x = xa; x <= xb; x++) { const dx = x - px; const d2 = dx * dx + dy2; if (d2 >= a0s && d2 <= a1s) { _hist[gray[row + x]]++; cnt++; } }
+  }
+  if (cnt < 30) return 0;
+  let acc = 0, P = 255; const target = cnt * 0.7;
+  for (let v = 0; v < 256; v++) { acc += _hist[v]; if (acc >= target) { P = v; break; } }
+  if (P < 25) P = 25;
+  const step = 0.25 * s; let best = -1;
+  for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) {
+    const ink = 1 - discMean(gray, w, h, px + ox * step, py + oy * step, rIn) / P;
+    if (ink > best) best = ink;
+  }
+  return Math.max(0, Math.min(1, best));
+}
+function measureDbg(img, px, py, rmm, s) {
+  const { w, h, gray } = img; const R = rmm * s; const rIn = Math.max(2.2, 0.55 * R);
+  const ink = measure(img, px, py, rmm, s);
+  const c = discMean(gray, w, h, px, py, rIn);
+  const a0 = 1.5 * R, a1 = 2.0 * R; _hist.fill(0); let cnt = 0;
+  for (let y = Math.floor(py - a1); y <= Math.ceil(py + a1); y++) for (let x = Math.floor(px - a1); x <= Math.ceil(px + a1); x++) { const d2 = (x - px) * (x - px) + (y - py) * (y - py); if (d2 >= a0 * a0 && d2 <= a1 * a1) { _hist[gray[y * w + x]]++; cnt++; } }
+  let acc = 0, P = 255; for (let v = 0; v < 256; v++) { acc += _hist[v]; if (acc >= cnt * 0.7) { P = v; break; } }
+  return { ink, P, c };
+}
+function decide(inks) {
+  let mx = 0; for (const v of inks) if (v > mx) mx = v;
+  const sel = [];
+  if (mx >= T_MARK) for (let i = 0; i < inks.length; i++) if (inks[i] >= T_MARK && inks[i] >= 0.55 * mx) sel.push(i);
+  return { sel, weak: mx >= T_WEAK && mx < T_MARK, mx };
+}
+
+/* ---------- vərəqi tapmaq ---------- */
+function quadScore(q) {            // q: 4 komponent (saat əqrəbi sıra ilə)
+  const P = q.map(c => [c.cx, c.cy]);
+  const d = [dist(P[0], P[1]), dist(P[1], P[2]), dist(P[2], P[3]), dist(P[3], P[0])];
+  const cross = (a, b, c) => (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]);
+  const cs = [cross(P[0], P[1], P[2]), cross(P[1], P[2], P[3]), cross(P[2], P[3], P[0]), cross(P[3], P[0], P[1])];
+  if (!(cs.every(v => v > 0) || cs.every(v => v < 0))) return Infinity;
+  for (let i = 0; i < 4; i++) {
+    const a = P[i], b = P[(i + 1) % 4], c = P[(i + 3) % 4];
+    const cos = ((b[0] - a[0]) * (c[0] - a[0]) + (b[1] - a[1]) * (c[1] - a[1])) / (dist(a, b) * dist(a, c) + 1e-9);
+    if (Math.abs(cos) > 0.5) return Infinity;
+  }
+  if (Math.abs(Math.log(d[0] / d[2])) > 0.4 || Math.abs(Math.log(d[1] / d[3])) > 0.4) return Infinity;
+  const r = (d[0] + d[2]) / (d[1] + d[3]);
+  const R0 = 182 / 269;
+  const e = Math.min(Math.abs(Math.log(r / R0)), Math.abs(Math.log(r * R0)));
+  if (e > 0.32) return Infinity;
+  const areas = q.map(c => c.area);
+  const amax = Math.max(...areas), amin = Math.min(...areas);
+  if (amax / amin > 4.5) return Infinity;
+  const side = q.reduce((s, c) => s + Math.sqrt(c.area), 0) / 4;
+  const quadSide = Math.sqrt(polyArea(P));
+  const rel = side / quadSide;              // gözlənilən ≈ 10/sqrt(182*269)·0.97 ≈ 0.044
+  const lr = Math.abs(Math.log(rel / 0.044));
+  if (lr > 0.75) return Infinity;
+  return e + 0.5 * lr + 0.3 * Math.log(amax / amin) - 0.3 * Math.log(polyArea(P) / 1e6);
+}
+function chooseQuads(cands, K) {
+  const res = [];
+  const n = cands.length;
+  for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++) for (let c = b + 1; c < n; c++) for (let d = c + 1; d < n; d++) {
+    const q = [cands[a], cands[b], cands[c], cands[d]];
+    const mx = q.reduce((s, k) => s + k.cx, 0) / 4, my = q.reduce((s, k) => s + k.cy, 0) / 4;
+    q.sort((p, r) => Math.atan2(p.cy - my, p.cx - mx) - Math.atan2(r.cy - my, r.cx - mx));
+    const sc = quadScore(q);
+    if (sc < Infinity) res.push({ q, sc });
+  }
+  res.sort((x, y) => x.sc - y.sc);
+  return res.slice(0, K);
+}
+function cellsOk(img, map, s) {
+  const v = CELLS.map(c => { const p = map(c.x, c.y); return measure(img, p[0], p[1], 2.0, s); });
+  const on = v.map(x => x > 0.45);
+  if (!on[0]) return null;
+  if (on[3]) return !on[1] && !on[2] ? 'W' : null;        // yazı səhifəsi (kod 1001)
+  if (on[1] && !on[2]) return 1;
+  if (on[2] && !on[1]) return 2;
+  return null;
+}
+
+/* ---------- ehtiyat yol: aşağı künc işarələri çapda kəsilibsə və ya kadrdan kənardadırsa ----------
+   Sol-yuxarıdakı halqalı künc + ikinci iri künc → ilkin oxşarlıq; sonra kənar işarələr (sol 9, sağ 9, yuxarı 5, aşağı 5)
+   bir-bir tapılır, model oxşarlıq → affin → homoqrafiya olaraq dəqiqləşir. Səhifə kodu oxunmasa, nəticə qəbul edilmir. */
+const TPTS = (() => {
+  const a = CORN.map((c, i) => ({ x: c[0], y: c[1], k: 'c', i, e: null }));
+  ANCHORS.forEach(an => a.push({ x: an.x, y: an.y, k: 'a', e: an.e }));
+  return a;
+})();
+function fitSim(P) {
+  const n = P.length; if (n < 2) return null;
+  let tx = 0, ty = 0, ux = 0, uy = 0;
+  for (const p of P) { tx += p.x; ty += p.y; ux += p.u; uy += p.v; }
+  tx /= n; ty /= n; ux /= n; uy /= n;
+  let a = 0, b = 0, d = 0;
+  for (const p of P) { const X = p.x - tx, Y = p.y - ty, U = p.u - ux, V = p.v - uy; a += X * U + Y * V; b += X * V - Y * U; d += X * X + Y * Y; }
+  if (d < 1e-9) return null;
+  const zr = a / d, zi = b / d;
+  return { type: 's', f: (x, y) => [zr * (x - tx) - zi * (y - ty) + ux, zi * (x - tx) + zr * (y - ty) + uy] };
+}
+function fitAff(P) {
+  const A = [[0, 0, 0], [0, 0, 0], [0, 0, 0]], bu = [0, 0, 0], bv = [0, 0, 0];
+  for (const p of P) { const r = [p.x, p.y, 1]; for (let i = 0; i < 3; i++) { for (let j = 0; j < 3; j++) A[i][j] += r[i] * r[j]; bu[i] += r[i] * p.u; bv[i] += r[i] * p.v; } }
+  const a = solveLinear(A.map(r => r.slice()), bu), b = solveLinear(A.map(r => r.slice()), bv);
+  if (!a || !b) return null;
+  return { type: 'a', f: (x, y) => [a[0] * x + a[1] * y + a[2], b[0] * x + b[1] * y + b[2]] };
+}
+function fitHom(P, D) {
+  let cu = 0, cv = 0; for (const p of P) { cu += p.u; cv += p.v; } cu /= P.length; cv /= P.length;
+  const A = Array.from({ length: 8 }, () => new Array(8).fill(0)), bb = new Array(8).fill(0);
+  for (const p of P) {
+    const x = (p.x - 105) / 100, y = (p.y - 148.5) / 150, u = (p.u - cu) / D, v = (p.v - cv) / D;
+    const r1 = [x, y, 1, 0, 0, 0, -u * x, -u * y], r2 = [0, 0, 0, x, y, 1, -v * x, -v * y];
+    for (let i = 0; i < 8; i++) { for (let j = 0; j < 8; j++) A[i][j] += r1[i] * r1[j] + r2[i] * r2[j]; bb[i] += r1[i] * u + r2[i] * v; }
+  }
+  const h = solveLinear(A, bb); if (!h) return null;
+  const Hn = [h[0], h[1], h[2], h[3], h[4], h[5], h[6], h[7], 1];
+  const Tt = [1 / 100, 0, -105 / 100, 0, 1 / 150, -148.5 / 150, 0, 0, 1], Ti = [D, 0, cu, 0, D, cv, 0, 0, 1];
+  const mul = (a, b) => { const c = new Array(9); for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) c[i * 3 + j] = a[i * 3] * b[j] + a[i * 3 + 1] * b[3 + j] + a[i * 3 + 2] * b[6 + j]; return c; };
+  let H = mul(Ti, mul(Hn, Tt));
+  if (!(Math.abs(H[8]) > 1e-12)) return null;
+  H = H.map(v => v / H[8]);
+  for (const [x, y] of [[14, 14], [196, 14], [196, 283], [14, 283], [105, 148.5]]) if (!(H[6] * x + H[7] * y + H[8] > 0)) return null;
+  return { type: 'h', H, f: (x, y) => applyH(H, x, y) };
+}
+function pickModel(P, D) {
+  const n = P.length; if (n < 2) return null;
+  let mx = 0, my = 0; for (const p of P) { mx += p.x; my += p.y; } mx /= n; my /= n;
+  let sxx = 0, syy = 0, sxy = 0; for (const p of P) { const X = p.x - mx, Y = p.y - my; sxx += X * X; syy += Y * Y; sxy += X * Y; }
+  sxx /= n; syy /= n; sxy /= n;
+  const tr = sxx + syy, det = sxx * syy - sxy * sxy, disc = Math.sqrt(Math.max(0, tr * tr / 4 - det));
+  const minStd = Math.sqrt(Math.max(0, tr / 2 - disc));
+  const lv = new Set(P.map(p => Math.round(p.y / 6))).size;          // fərqli sıra (y) səviyyələrinin sayı
+  let m = null;
+  if (n >= 11 && lv >= 3 && minStd >= 14) m = fitHom(P, D);
+  if (!m) m = fitSim(P);
+  if (m) m.minStd = minStd;
+  return m;
+}
+function modelScale(f) {
+  const a = f(105, 148.5), b = f(115, 148.5), c = f(105, 158.5);
+  return Math.sqrt(Math.abs((b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1]))) / 10;
+}
+function locScale(f, x, y) {
+  const a = f(x, y), b = f(x + 6, y), c = f(x, y + 6);
+  return Math.sqrt(Math.abs((b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1]))) / 6;
+}
+function growHyp(cs, pI, qI, role, D) {
+  const M = new Map(), used = new Set([pI, qI]);
+  M.set(0, pI); M.set(role, qI);
+  const mkP = () => [...M].map(([ti, ci]) => ({ x: TPTS[ti].x, y: TPTS[ti].y, u: cs[ci].cx, v: cs[ci].cy, ti, ci }));
+  let mdl = fitSim(mkP());
+  if (!mdl) return null;
+  const resOf = (m, p) => { const q = m.f(p.x, p.y); return Math.hypot(q[0] - p.u, q[1] - p.v); };
+  function refit(tol) {            // modeli yenidən qur; homoqrafiya olduqda ən pis kənar nöqtəni at (ring — künc 0 — saxlanır)
+    for (let it = 0; it < 6; it++) {
+      const P = mkP(); const m = pickModel(P, D); if (!m) return false;
+      mdl = m;
+      if (P.length < 6 || m.type !== 'h') return true;
+      const s = modelScale(m.f); let wi = -1, wr = 0;
+      P.forEach((p, i) => { const r = resOf(m, p); if (p.ti !== 0 && r > wr) { wr = r; wi = i; } });
+      if (wr <= tol * s) return true;
+      M.delete(P[wi].ti); used.delete(P[wi].ci);
+    }
+    return true;
+  }
+  const order = TPTS.map((t, i) => i).filter(i => i !== 0 && i !== role).sort((a, b) => (TPTS[a].y - TPTS[b].y) || (TPTS[a].x - TPTS[b].x));
+  for (const bi of order) {
+    const T = TPTS[bi], pr = mdl.f(T.x, T.y), sE = locScale(mdl.f, T.x, T.y), isC = T.k === 'c';
+    const lo = (isC ? 7.5 : 2.6) * sE, hi = (isC ? 14 : 6.8) * sE;
+    let best = -1, bdist = (mdl.type === 'h' ? 4.5 : 8) * sE;
+    for (let j = 0; j < cs.length; j++) {
+      if (used.has(j)) continue;
+      const c = cs[j]; if (c.bb < lo || c.bb > hi) continue;
+      const d = Math.hypot(c.cx - pr[0], c.cy - pr[1]);
+      if (d < bdist) { bdist = d; best = j; }
+    }
+    if (best < 0) continue;
+    M.set(bi, best); used.add(best);
+    if (!refit(3.2)) return null;
+  }
+  // ikinci keçid: son modelə görə qaçırılanları daha dar radiusla tap
+  if (!refit(2.4)) return null;
+  for (let pass = 0; pass < 2; pass++) {
+    let added = 0;
+    for (let i = 0; i < TPTS.length; i++) {
+      if (M.has(i)) continue;
+      const T = TPTS[i], pr = mdl.f(T.x, T.y), sE = locScale(mdl.f, T.x, T.y), isC = T.k === 'c';
+      const lo = (isC ? 7.5 : 2.6) * sE, hi = (isC ? 14 : 6.8) * sE;
+      let best = -1, bdist = 3.4 * sE;
+      for (let j = 0; j < cs.length; j++) {
+        if (used.has(j)) continue;
+        const c = cs[j]; if (c.bb < lo || c.bb > hi) continue;
+        const d = Math.hypot(c.cx - pr[0], c.cy - pr[1]);
+        if (d < bdist) { bdist = d; best = j; }
+      }
+      if (best >= 0) { M.set(i, best); used.add(best); added++; }
+    }
+    if (!refit(2.0)) return null;
+    if (!added) break;
+  }
+  if (!mdl || mdl.type !== 'h') return null;
+  const P = mkP(); const s = modelScale(mdl.f);
+  let ss = 0; for (const p of P) { const r = resOf(mdl, p) / s; ss += r * r; }
+  const nA = P.filter(p => TPTS[p.ti].k === 'a').length;
+  return { M, mdl, n: P.length, nA, rms: Math.sqrt(ss / P.length), s };
+}
+function residMapFromMatches(cs, G) {
+  const H = G.mdl.H, res = new Map();
+  G.M.forEach((ci, ti) => { const T = TPTS[ti], pr = applyH(H, T.x, T.y); res.set(ti, [cs[ci].cx - pr[0], cs[ci].cy - pr[1]]); });
+  const s = G.s, lists = { L: [], R: [], T: [], B: [] };
+  res.forEach((r, ti) => { const T = TPTS[ti]; if (T.k === 'a') lists[T.e].push({ t: (T.e === 'L' || T.e === 'R') ? T.y : T.x, dx: r[0], dy: r[1] }); });
+  for (const e of ['L', 'R', 'T', 'B']) {
+    const l = lists[e].sort((p, q) => p.t - q.t);
+    lists[e] = l.map((p, i) => {
+      const a = l[i - 1], b = l[i + 1];
+      if (a && b) { const mx = (a.dx + b.dx) / 2, my = (a.dy + b.dy) / 2; if (Math.hypot(p.dx - mx, p.dy - my) > 1.4 * s) return { t: p.t, dx: mx, dy: my }; }
+      return p;
+    });
+  }
+  // görünməyən künc qalığı: kənar işarələrin sonuncu 4-nün meylindən (sönümlü) əlavə olunur — aşağı künclər çapda yoxdursa lens/əyilmə xətası xəttə yaxın davam edir
+  const ex = (list, toEnd, tc) => {
+    if (!list.length) return null;
+    const pts = toEnd ? list.slice(-4) : list.slice(0, 4), a = toEnd ? pts[pts.length - 1] : pts[0];
+    if (pts.length < 3) return [a.dx, a.dy];
+    const n = pts.length, mt = pts.reduce((q, p) => q + p.t, 0) / n, mx = pts.reduce((q, p) => q + p.dx, 0) / n, my = pts.reduce((q, p) => q + p.dy, 0) / n;
+    let stt = 0, stx = 0, sty = 0; for (const p of pts) { stt += (p.t - mt) * (p.t - mt); stx += (p.t - mt) * (p.dx - mx); sty += (p.t - mt) * (p.dy - my); }
+    const dt = tc - a.t, k = stt > 0 ? 0.7 * dt / stt : 0;
+    return [a.dx + k * stx, a.dy + k * sty];
+  };
+  const nb = [[ex(lists.L, false, 14), ex(lists.T, false, 14)], [ex(lists.R, false, 14), ex(lists.T, true, 196)],
+    [ex(lists.R, true, 283), ex(lists.B, true, 196)], [ex(lists.L, true, 283), ex(lists.B, false, 14)]];
+  const cr = [0, 1, 2, 3].map(k => {
+    if (res.has(k)) return res.get(k);
+    const v = nb[k].filter(Boolean); if (!v.length) return [0, 0];
+    return [v.reduce((a, p) => a + p[0], 0) / v.length, v.reduce((a, p) => a + p[1], 0) / v.length];
+  });
+  const E = { L: [14, 283, 0, 3], R: [14, 283, 1, 2], T: [14, 196, 0, 1], B: [14, 196, 3, 2] }, resid = { c: cr };
+  for (const e of ['L', 'R', 'T', 'B']) {
+    const [t0, t1, ka, kb] = E[e];
+    resid[e] = [{ t: t0, dx: cr[ka][0], dy: cr[ka][1] }].concat(lists[e], [{ t: t1, dx: cr[kb][0], dy: cr[kb][1] }]);
+  }
+  return resid;
+}
+function locatePartial(img, mask, comps, dim) {
+  const { w, h } = img;
+  const cs = [];
+  for (const c of comps) {
+    const bb = Math.max(c.maxx - c.minx, c.maxy - c.miny) + 1, side = Math.sqrt(c.area);
+    if (side < 0.005 * dim || bb > 0.14 * dim || c.elong >= 1.9 || c.sq <= 0.42 || c.sq >= 1.25) continue;
+    cs.push({ cx: c.cx, cy: c.cy, area: c.area, bb, edge: c.minx <= 1 || c.miny <= 1 || c.maxx >= w - 2 || c.maxy >= h - 2,
+      ring: mask[Math.round(c.cy) * w + Math.round(c.cx)] === 0 });
+  }
+  if (cs.length < 8) return { ok: false };
+  cs.sort((a, b) => b.area - a.area); if (cs.length > 800) cs.length = 800;
+  let ps = cs.map((c, i) => i).filter(i => cs[i].ring && !cs[i].edge && cs[i].bb >= 0.008 * dim).slice(0, 4);
+  if (!ps.length) ps = cs.map((c, i) => i).filter(i => !cs[i].edge).sort((a, b) => cs[b].bb - cs[a].bb).slice(0, 5);
+  const RD = [null, 182, 324.8, 269];          // rol: 1=TR, 2=BR, 3=BL — sol-yuxarı künc (halqa) ilə məsafə (mm)
+  const hyps = [];
+  for (const pI of ps) {
+    const p = cs[pI], s0 = p.bb / 10;
+    for (let qI = 0; qI < cs.length; qI++) {
+      if (qI === pI) continue;
+      const q = cs[qI]; if (q.bb < 0.75 * p.bb || q.bb > 1.5 * p.bb) continue;
+      const d = Math.hypot(q.cx - p.cx, q.cy - p.cy);
+      for (const role of [1, 2, 3]) {
+        const e = RD[role] * s0; if (d < 0.6 * e || d > 1.4 * e) continue;
+        const G = growHyp(cs, pI, qI, role, dim);
+        if (G && G.n >= 12 && G.nA >= 9 && G.mdl.minStd >= 35 && G.rms <= 1.6) hyps.push(G);
+      }
+    }
+  }
+  if (!hyps.length) return { ok: false };
+  hyps.sort((a, b) => (b.n - a.n) || (a.rms - b.rms));
+  for (const G of hyps.slice(0, 4)) {
+    const resid = residMapFromMatches(cs, G), H0 = G.mdl.H, map = makeMap(H0, resid);
+    const s = Math.sqrt(polyArea(CORN.map(c => applyH(H0, c[0], c[1]))) / (182 * 269));
+    const pg = cellsOk(img, map, s);
+    if (pg) return { ok: true, H0, s, page: pg, quad: CORN.map(c => applyH(H0, c[0], c[1])), map, anchorsFound: G.nA, anchorsTotal: ANCHORS.length, ringFound: true, partial: true };
+  }
+  return { ok: false };
+}
+
+function debugComps(img, n) {
+  const { w, h, gray } = img; const mask = binarize(gray, w, h); const comps = labelComps(mask, w, h, 14);
+  return comps.sort((a, b) => b.area - a.area).slice(0, n || 25).map(c => ({ cx: Math.round(c.cx), cy: Math.round(c.cy), area: c.area, bb: [c.maxx - c.minx + 1, c.maxy - c.miny + 1], elong: +c.elong.toFixed(2), sq: +c.sq.toFixed(2) }));
+}
+function locate(img) {
+  const { w, h, gray } = img;
+  const mask = binarize(gray, w, h);
+  const dim = Math.max(w, h);
+  const comps = labelComps(mask, w, h, 14);
+  const r1 = locateQuad(img, mask, comps, dim);                  // əsas yol: 4 künc işarəsi görünür
+  if (r1.ok && r1.anchorsFound >= 10) return r1;
+  const r2 = locatePartial(img, mask, comps, dim);               // ehtiyat yol: aşağı künclər çapda kəsilib / kadrdan kənardadır
+  if (r2.ok && (!r1.ok || r2.anchorsFound > r1.anchorsFound)) return r2;
+  return r1;
+}
+function locateQuad(img, mask, comps, dim) {
+  const { w, h } = img;
+  const cands = comps.filter(c => {
+    const side = Math.sqrt(c.area);
+    return side >= 0.006 * dim && side <= 0.12 * dim && c.elong < 1.8 && c.sq > 0.55 && c.sq < 1.25;
+  }).sort((a, b) => b.area - a.area).slice(0, 14);
+  if (cands.length < 4) return { ok: false, err: 'Künc işarələri tapılmadı (vərəq tam görünmür və ya şəkil çox qaranlıqdır)' };
+  const quads = chooseQuads(cands, 8);
+  if (!quads.length) return { ok: false, err: 'Vərəqin 4 künc işarəsi tapılmadı (vərəqin hamısı və künclər görünməlidir)' };
+  const eA = (4 * 1) * (4 * 1);
+  function buildResid(H0, s) {
+    const eAs = eA * s * s, rs = 3.2 * s;
+    const lists = { L: [], R: [], T: [], B: [] };
+    let nFound = 0;
+    for (const a of ANCHORS) {
+      const pr = applyH(H0, a.x, a.y);
+      let bestC = null, bd = rs;
+      for (const c of comps) {
+        if (Math.abs(c.cx - pr[0]) > rs || Math.abs(c.cy - pr[1]) > rs) continue;
+        if (c.area < eAs * 0.35 || c.area > eAs * 2.6 || c.elong > 2) continue;
+        const d = Math.hypot(c.cx - pr[0], c.cy - pr[1]);
+        if (d < bd) { bd = d; bestC = c; }
+      }
+      if (bestC) {
+        nFound++;
+        const t = (a.e === 'L' || a.e === 'R') ? a.y : a.x;
+        lists[a.e].push({ t, dx: bestC.cx - pr[0], dy: bestC.cy - pr[1] });
+      }
+    }
+    const edges = { L: [14, 283], R: [14, 283], T: [14, 196], B: [14, 196] };
+    const resid = {};
+    for (const e of ['L', 'R', 'T', 'B']) {
+      let l = lists[e].sort((p, q) => p.t - q.t);
+      l = l.map((p, i) => {
+        const a = l[i - 1], b = l[i + 1];
+        if (a && b) {
+          const mx = (a.dx + b.dx) / 2, my = (a.dy + b.dy) / 2;
+          if (Math.hypot(p.dx - mx, p.dy - my) > 1.4 * s) return { t: p.t, dx: mx, dy: my };
+        }
+        return p;
+      });
+      resid[e] = [{ t: edges[e][0], dx: 0, dy: 0 }].concat(l, [{ t: edges[e][1], dx: 0, dy: 0 }]);
+    }
+    return { resid, nFound };
+  }
+
+  let found = null; const dbg = []; let nLight = 0;
+  for (const qq of quads) {
+    const quad = qq.q;
+    const light = quad.map(c => mask[Math.round(c.cy) * w + Math.round(c.cx)] === 0);
+    nLight = light.filter(Boolean).length;
+    const orders = [];
+    const rot = k => [0, 1, 2, 3].map(i => quad[(i + k) % 4]);
+    if (nLight === 1) orders.push(rot(light.indexOf(true)));
+    for (let k = 0; k < 4; k++) orders.push(rot(k));
+    for (const ord of orders) {
+      const dst = ord.map(c => [c.cx, c.cy]);
+      const rr = dist(dst[0], dst[1]) / dist(dst[1], dst[2]);
+      if (Math.abs(Math.log(rr / (182 / 269))) > 0.4) continue;
+      const H0 = solveH(CORN, dst); if (!H0) continue;
+      const s = Math.sqrt(polyArea(dst) / (182 * 269));
+      const br = buildResid(H0, s);
+      const map = makeMap(H0, br.resid);
+      const pg = cellsOk(img, map, s);
+      dbg.push({ s: +s.toFixed(2), pg, anchors: br.nFound });
+      if (pg) { found = { ord, dst, H0, s, page: pg, map, nFound: br.nFound }; break; }
+    }
+    if (found) break;
+  }
+  if (!found) return { ok: false, err: 'Səhifə kodu oxunmadı (vərəqin yuxarı hissəsi tam görünməlidir)', dbg };
+  return { ok: true, H0: found.H0, s: found.s, page: found.page, quad: found.dst, map: found.map, anchorsFound: found.nFound, anchorsTotal: ANCHORS.length, ringFound: nLight === 1 };
+}
+
+/* ---------- oxuma ---------- */
+function readSheet(img, cfg, opts) {
+  opts = opts || {};
+  cfg = normalizeCfg(cfg);
+  const loc = locate(img);
+  if (!loc.ok) return { ok: false, err: loc.err, dbg: loc.dbg, quad: loc.quad, nLight: loc.nLight };
+  if (loc.page === 'W') return { ok: true, write: true, page: 'W', id: null, variant: null, flags: [], scale: loc.s, anchors: [loc.anchorsFound, loc.anchorsTotal], map: loc.map };   // yazı səhifəsi: oxunmur
+  const P = buildPages(cfg)[loc.page - 1];
+  if (!P) return { ok: false, err: loc.page + '-ci səhifə bu imtahan quruluşunda yoxdur (bu imtahanın cavab vərəqi tək səhifəlidir)', dbg: loc.dbg };
+  {   // çərçivədən kənara çıxan dairə varsa oxumaq olmaz: kəsilmiş dairə "boş" kimi görünüb səssiz səhvə səbəb olur
+    let out = 0;
+    for (const g of P.groups) for (const b of g.bub) {
+      const p = loc.map(b.x, b.y), R = b.r * loc.s;
+      if (!(p[0] - R >= 0 && p[1] - R >= 0 && p[0] + R <= img.w - 1 && p[1] + R <= img.h - 1)) out++;
+    }
+    if (out) return { ok: false, err: 'Vərəqin bir hissəsi şəklin çərçivəsindən kənarda qalıb (' + out + ' dairə kəsilib) — vərəqi bütöv çərçivəyə salıb yenidən çəkin', dbg: loc.dbg, outside: out };
+  }
+  const flags = [];
+  const res = { ok: true, page: loc.page, id: null, variant: null, flags, scale: loc.s,
+    anchors: [loc.anchorsFound, loc.anchorsTotal] };
+  const idd = Array(IDD).fill(null);
+  const weak = [], multiC = [], multiW = [], multiCd = [];
+  const SJ = cfg.subjects;
+  const closed = range(NS).map(s => Array(SJ[s].nC).fill(-1));
+  const tf = range(NS).map(s => range(SJ[s].nT).map(() => Array(TFN).fill(-1)));
+  const written = range(NS).map(s => Array(SJ[s].nW).fill(-1));
+  const scoresW = range(NS).map(s => Array(SJ[s].nW).fill(-1)), scoresE = range(NS).map(s => Array(SJ[s].nE).fill(-1));   // 2-ci səhifədəki yoxlayıcı dairələri
+  const cdCols = range(NS).map(s => range(SJ[s].nK).map(() => Array(CCOLS).fill('')));
+  let idBad = 0;
+  for (const g of P.groups) {
+    const inks = g.bub.map(b => { const p = loc.map(b.x, b.y); return measure(img, p[0], p[1], b.r, loc.s); });
+    const d = decide(inks);
+    if (g.t === 'id') {
+      if (d.sel.length === 1) idd[g.a] = d.sel[0]; else idBad++;
+    } else if (g.t === 'var') {
+      if (d.sel.length === 1) res.variant = LETTERS[d.sel[0]];
+      else if (d.sel.length > 1) flags.push({ lv: 'e', m: 'Variant: bir neçə dairə işarələnib' });
+    } else if (g.t === 'fl') {
+      res.lang = d.sel.length === 1 ? d.sel[0] : d.sel.length > 1 ? -2 : -1;
+      if (d.sel.length > 1) flags.push({ lv: 'e', m: 'Xarici dil: iki dairə işarələnib' });
+      else if (d.weak || (d.sel.length === 1 && d.mx < T_MARK + 0.06)) weak.push('xarici dil');
+    } else if (g.t === 'cl') {
+      closed[g.a][g.b] = d.sel.length === 0 ? -1 : d.sel.length === 1 ? d.sel[0] : -2;
+      if (d.sel.length > 1) multiC.push((g.a + 1) + '/' + SJ[g.a].numC[g.b]);
+      else if (d.weak || (d.sel.length === 1 && d.mx < T_MARK + 0.06)) weak.push((g.a + 1) + '/' + SJ[g.a].numC[g.b]);
+    } else if (g.t === 'tf') {
+      tf[g.a][g.b][g.c] = d.sel.length === 0 ? -1 : d.sel.length === 1 ? d.sel[0] : -2;
+      const lab = (g.a + 1) + '/' + SJ[g.a].numT[g.b] + '.' + (g.c + 1);
+      if (d.sel.length > 1) multiC.push(lab);
+      else if (d.weak || (d.sel.length === 1 && d.mx < T_MARK + 0.06)) weak.push(lab);
+    } else if (g.t === 'wr') {
+      written[g.a][g.b] = d.sel.length === 0 ? -1 : d.sel.length === 1 ? d.sel[0] : -2;
+      if (d.sel.length > 1) multiW.push((g.a + 1) + '/' + SJ[g.a].numW[g.b]);
+    } else if (g.t === 'ws') {
+      scoresW[g.a][g.b] = d.sel.length === 0 ? -1 : d.sel.length === 1 ? d.sel[0] : -2;
+      if (d.sel.length > 1) multiW.push((g.a + 1) + '/' + SJ[g.a].numW[g.b]);
+      else if (d.weak || (d.sel.length === 1 && d.mx < T_MARK + 0.06)) weak.push('bal ' + (g.a + 1) + '/' + SJ[g.a].numW[g.b]);
+    } else if (g.t === 'es') {
+      scoresE[g.a][g.b] = d.sel.length === 0 ? -1 : d.sel.length === 1 ? d.sel[0] : -2;
+      if (d.sel.length > 1) multiW.push((g.a + 1) + '/' + SJ[g.a].numE[g.b] + ' (esse)');
+      else if (d.weak || (d.sel.length === 1 && d.mx < T_MARK + 0.06)) weak.push('esse balı ' + (g.a + 1) + '/' + SJ[g.a].numE[g.b]);
+    } else if (g.t === 'cd') {
+      cdCols[g.a][g.b][g.c] = d.sel.length === 0 ? '' : d.sel.length === 1 ? SYM[d.sel[0]] : '?';
+      if (d.sel.length > 1) multiCd.push((g.a + 1) + '/' + SJ[g.a].numK[g.b]);
+    }
+  }
+  if (idd.every(v => v !== null)) res.id = idd.join('');
+  else flags.push({ lv: 'e', m: 'Şagird nömrəsi tam oxunmadı (' + idBad + ' rəqəm sırası boş və ya birdən çox)' });
+  if (loc.page === 1) {
+    res.closed = closed; res.tf = tf; res.written = written;
+    if (cfg.fl && cfg.fl.on && res.lang === -1) flags.push({ lv: 'e', m: 'Xarici dil seçilməyib (' + cfg.fl.n.join(' / ') + ' dairəsi boşdur)' });
+    if (multiC.length) flags.push({ lv: 'w', m: 'Bir sualda 2+ işarə (fənn/sual): ' + multiC.join(', ') });
+    if (weak.length) flags.push({ lv: 'w', m: 'Zəif/aydın olmayan işarə: ' + weak.join(', ') });
+    if (multiW.length) flags.push({ lv: 'w', m: 'Yazılı bal xanasında 2+ işarə: ' + multiW.join(', ') });
+    if (closed.every(r => r.every(v => v === -1)) && tf.every(r => r.every(b => b.every(v => v === -1)))) flags.push({ lv: 'w', m: 'Qapalı cavabların hamısı boşdur' });
+  } else {
+    res.cc = cdCols;
+    res.coded = cdCols.map(sj => sj.map(cols => cols.join('')));
+    if (multiCd.length) flags.push({ lv: 'w', m: 'Kod sütununda 2+ işarə (fənn/tapşırıq): ' + multiCd.join(', ') });
+    if (P.groups.some(g => g.t === 'ws' || g.t === 'es')) {
+      res.scoresW = scoresW; res.scoresE = scoresE;
+      if (multiW.length) flags.push({ lv: 'w', m: 'Yazılı bal xanasında 2+ işarə: ' + multiW.join(', ') });
+      if (weak.length) flags.push({ lv: 'w', m: 'Zəif/aydın olmayan işarə: ' + weak.join(', ') });
+    }
+  }
+  if (loc.s < 3.6) flags.push({ lv: 'w', m: 'Şəkil aşağı keyfiyyətlidir (vərəq kiçik görünür) — daha yaxından çəkin' });
+  if (loc.anchorsFound < 12) flags.push({ lv: 'w', m: 'Vərəqin kənar işarələrinin bir hissəsi görünmür (' + loc.anchorsFound + '/' + loc.anchorsTotal + ')' });
+  if (opts.rectify) res.rect = rectify(img, loc.map, opts.rectify);
+  res.map = loc.map;
+  return res;
+}
+
+function rectify(img, map, ppm) {
+  const W = Math.round(PW * ppm), H = Math.round(PH * ppm);
+  const out = new Uint8ClampedArray(W * H * 4);
+  const { w, h, gray } = img;
+  for (let Y = 0; Y < H; Y++) for (let X = 0; X < W; X++) {
+    const p = map(X / ppm, Y / ppm);
+    let v = 255;
+    const x = p[0], y = p[1];
+    if (x >= 0 && y >= 0 && x < w - 1 && y < h - 1) {
+      const x0 = x | 0, y0 = y | 0, fx = x - x0, fy = y - y0, i = y0 * w + x0;
+      v = gray[i] * (1 - fx) * (1 - fy) + gray[i + 1] * fx * (1 - fy) + gray[i + w] * (1 - fx) * fy + gray[i + w + 1] * fx * fy;
+    }
+    const o = (Y * W + X) * 4; out[o] = out[o + 1] = out[o + 2] = v; out[o + 3] = 255;
+  }
+  return { w: W, h: H, data: out };
+}
+
+async function loadGray(blob, maxSide) {
+  const bmp = await createImageBitmap(blob);
+  const sc = Math.min(1, (maxSide || 3000) / Math.max(bmp.width, bmp.height));
+  const cw = Math.max(1, Math.round(bmp.width * sc)), ch = Math.max(1, Math.round(bmp.height * sc));
+  const cv = mkCanvas(cw, ch);
+  const ctx = cv.getContext('2d', { willReadFrequently: true });
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(bmp, 0, 0, cw, ch);
+  if (bmp.close) bmp.close();
+  const d = ctx.getImageData(0, 0, cw, ch).data;
+  const gray = new Uint8Array(cw * ch);
+  for (let i = 0, j = 0; i < gray.length; i++, j += 4) gray[i] = (d[j] * 77 + d[j + 1] * 150 + d[j + 2] * 29) >> 8;
+  return { w: cw, h: ch, gray };
+}
+
+/* ---------- açar və bal ---------- */
+function normCode(str) {
+  if (str == null) return '';
+  let t = String(str).replace(/\s+/g, '').replace(/[−–—]/g, '-').replace(/\./g, ',');
+  if (t.indexOf('?') >= 0) return t;
+  const m = /^(-?)(\d*)(?:,(\d*))?$/.exec(t);
+  if (!m) return t;
+  const sign = m[1]; let ip = m[2] || '', fp = m[3] || '';
+  if (ip === '' && fp === '') return '';
+  ip = ip.replace(/^0+(?=\d)/, ''); if (ip === '') ip = '0';
+  fp = fp.replace(/0+$/, '');
+  const body = ip + (fp ? ',' + fp : '');
+  if (body === '0') return '0';
+  return sign + body;
+}
+function parseClosedKey(str, nOpt, n) {
+  n = n == null ? NC : n;
+  const out = Array(n).fill(-1); let bad = 0, count = 0;
+  const chars = String(str || '').toUpperCase().replace(/[\s,;|]+/g, '').split('');
+  chars.forEach((ch, i) => {
+    if (i >= n) { bad++; return; }
+    const k = LETTERS.indexOf(ch);
+    if (k >= 0 && k < nOpt) { out[i] = k; count++; }
+    else if (ch === '-' || ch === '?' || ch === '.' || ch === '*') { /* açar yoxdur */ }
+    else bad++;
+  });
+  return { arr: out, count, len: chars.length, bad };
+}
+function closedKeyToStr(arr) { return arr.map(v => v >= 0 ? LETTERS[v] : '-').join(''); }
+/* doğru/yanlış tapşırığının açarı: 4 simvol; D (A, T) = doğru → 0, Y (B, F) = yanlış → 1, '-' = açar yoxdur */
+function parseTfKey(str) {
+  const out = Array(TFN).fill(-1); let bad = 0, count = 0;
+  const chars = String(str || '').toUpperCase().replace(/[\s,;|]+/g, '').split('');
+  chars.forEach((ch, i) => {
+    if (i >= TFN) { bad++; return; }
+    if (ch === 'D' || ch === 'A' || ch === 'T') { out[i] = 0; count++; }
+    else if (ch === 'Y' || ch === 'B' || ch === 'F') { out[i] = 1; count++; }
+    else if (ch === '-' || ch === '?' || ch === '.' || ch === '*') { /* açar yoxdur */ }
+    else bad++;
+  });
+  return { arr: out, count, len: chars.length, bad };
+}
+function tfKeyToStr(arr) { return (arr || []).map(v => v === 0 ? 'D' : v === 1 ? 'Y' : '-').join(''); }
+/* doğru/yanlış tapşırığının balı (DİM): 4 bənd düz = 1 bal, 3 düz = 0,5 bal, qalan hallarda 0; yanlış cavab bal aparmır */
+function tfPoints(ans, key) {
+  if (!key || key.length < TFN || key.some(v => v !== 0 && v !== 1)) return null;     // açar tam deyil
+  let c = 0;
+  for (let j = 0; j < TFN; j++) if (ans && ans[j] === key[j]) c++;
+  return { c, pts: c === TFN ? 1 : c === TFN - 1 ? 0.5 : 0 };
+}
+
+const at = (a, i, d) => (a && a[i] != null ? a[i] : d);
+function scoreStudent(st, cfg) {
+  cfg = normalizeCfg(cfg);
+  const key = effKey(cfg, st.variant, st.lang) || null;
+  const langOk = !cfg.fl.on || st.lang === 0 || st.lang === 1;       // xarici dil seçilməyibsə 1-ci fənnin açarı məlum deyil
+  const subj = []; let total = 0; let incomplete = false;
+  for (let s = 0; s < NS; s++) {
+    const S = cfg.subjects[s];
+    const noLang = s === 0 && !langOk;
+    let D = 0, Y = 0, B = 0, K = 0, Wu = 0, Tp = 0, Eh = 0, noKey = 0, wMissing = 0, eMissing = 0;
+    for (let q = 0; q < S.nC; q++) {
+      const a = st.closed ? at(st.closed[s], q, -1) : -1;
+      const k = key && !noLang ? at(key.closed[s], q, -1) : -1;
+      if (k < 0) { noKey++; continue; }
+      if (a === -1) B++;
+      else if (a === -2) { if (cfg.multi === 'wrong') Y++; else B++; }
+      else if (a === k) D++; else Y++;
+    }
+    for (let t = 0; t < S.nT; t++) {
+      const kt = key && !noLang && key.tf && key.tf[s] ? key.tf[s][t] : null;
+      const at_ = st.tf && st.tf[s] ? st.tf[s][t] : null;
+      const r = tfPoints(at_, kt);
+      if (!r) { noKey++; continue; }
+      Tp += r.pts;
+    }
+    for (let t = 0; t < S.nK; t++) {
+      const ans = normCode(st.coded ? at(st.coded[s], t, '') : ''), kk = normCode(key && !noLang ? at(key.coded[s], t, '') : '');
+      if (kk !== '' && ans === kk) K++;
+    }
+    for (let t = 0; t < S.nW; t++) {
+      const w = st.written ? at(st.written[s], t, -1) : -1;
+      if (w >= 0) Wu += w; else wMissing++;
+    }
+    for (let t = 0; t < S.nE; t++) {
+      const e = st.essay ? at(st.essay[s], t, -1) : -1;                  // yarım ballarla (2·bal)
+      if (e >= 0) Eh += Math.min(e, Math.round(cfg.essayMax * 2)); else eMissing++;
+    }
+    const Wp = Wu / 3;                                  // 2·(markerin verdiyi balların cəmi)
+    const Ep = Eh / 2;                                  // esse balı
+    let net = cfg.penalty ? D - Y / 4 : D;
+    if (cfg.clampZero && net < 0) net = 0;              // DİM: NBq mənfi çıxarsa 0 götürülür
+    const raw = net + Tp + K + Wp + Ep;
+    const maxRaw = S.maxRaw || 1;
+    const s100 = r1(raw * 100 / maxRaw);                // fənn üzrə nisbi bal 0,1-ə qədər yuvarlaqlaşdırılır
+    const weighted = s100 * S.coef;
+    total += weighted;
+    if (wMissing || eMissing || noLang) incomplete = true;
+    subj.push({ D, Y, B, K, Wp, Tp, Ep, noKey, wMissing, eMissing, noLang, raw, s100, weighted, maxRaw });
+  }
+  return { subj, total, incomplete, hasKey: !!key, langMissing: !langOk };
+}
+const r1 = x => { const v = Math.round(x * 10 + 1e-7) / 10; return v === 0 ? 0 : v; };
+
+/* ---------- ZIP + XLSX ---------- */
+let _crcT = null;
+function crc32(u8) {
+  if (!_crcT) { _crcT = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; _crcT[n] = c >>> 0; } }
+  let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = _crcT[(c ^ u8[i]) & 255] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+function concat(chunks) {
+  let n = 0; for (const c of chunks) n += c.length;
+  const out = new Uint8Array(n); let o = 0; for (const c of chunks) { out.set(c, o); o += c.length; }
+  return out;
+}
+function zipStore(files) {
+  const enc = new TextEncoder(); const chunks = [], central = []; let off = 0;
+  for (const f of files) {
+    const name = enc.encode(f.name), data = f.data, crc = crc32(data);
+    const lh = new Uint8Array(30 + name.length), dv = new DataView(lh.buffer);
+    dv.setUint32(0, 0x04034b50, true); dv.setUint16(4, 20, true); dv.setUint16(6, 0x0800, true); dv.setUint16(8, 0, true);
+    dv.setUint16(10, 0, true); dv.setUint16(12, 0x21, true); dv.setUint32(14, crc, true);
+    dv.setUint32(18, data.length, true); dv.setUint32(22, data.length, true); dv.setUint16(26, name.length, true); dv.setUint16(28, 0, true);
+    lh.set(name, 30); chunks.push(lh, data);
+    const ch = new Uint8Array(46 + name.length), cv = new DataView(ch.buffer);
+    cv.setUint32(0, 0x02014b50, true); cv.setUint16(4, 20, true); cv.setUint16(6, 20, true); cv.setUint16(8, 0x0800, true);
+    cv.setUint16(10, 0, true); cv.setUint16(12, 0, true); cv.setUint16(14, 0x21, true); cv.setUint32(16, crc, true);
+    cv.setUint32(20, data.length, true); cv.setUint32(24, data.length, true); cv.setUint16(28, name.length, true);
+    cv.setUint32(42, off, true); ch.set(name, 46); central.push(ch);
+    off += lh.length + data.length;
+  }
+  let cdSize = 0; for (const c of central) { chunks.push(c); cdSize += c.length; }
+  const end = new Uint8Array(22), ev = new DataView(end.buffer);
+  ev.setUint32(0, 0x06054b50, true); ev.setUint16(8, files.length, true); ev.setUint16(10, files.length, true);
+  ev.setUint32(12, cdSize, true); ev.setUint32(16, off, true);
+  chunks.push(end);
+  return concat(chunks);
+}
+function xmlEsc(s) { return String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function colName(i) { let s = ''; i++; while (i > 0) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = ((i - 1 - m) / 26) | 0; } return s; }
+/* sheets: [{name, rows:[[cell,...]], widths:[..], header:1}] ; cell: number | string | {v, s} (s: 0 normal,1 qalın,2 0.0 format) */
+function buildXlsx(sheets) {
+  const enc = new TextEncoder();
+  const files = [];
+  const head = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
+  files.push({ name: '[Content_Types].xml', data: enc.encode(head + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' + sheets.map((_, i) => '<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join('') + '</Types>') });
+  files.push({ name: '_rels/.rels', data: enc.encode(head + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>') });
+  files.push({ name: 'xl/workbook.xml', data: enc.encode(head + '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>' + sheets.map((s, i) => '<sheet name="' + xmlEsc(s.name) + '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>').join('') + '</sheets></workbook>') });
+  files.push({ name: 'xl/_rels/workbook.xml.rels', data: enc.encode(head + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + sheets.map((_, i) => '<Relationship Id="rId' + (i + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>').join('') + '<Relationship Id="rId' + (sheets.length + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>') });
+  files.push({ name: 'xl/styles.xml', data: enc.encode(head + '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="0.0"/></numFmts><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>') });
+  sheets.forEach((sh, si) => {
+    let x = head + '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">';
+    if (sh.header) x += '<sheetViews><sheetView workbookViewId="0"><pane ySplit="' + sh.header + '" topLeftCell="A' + (sh.header + 1) + '" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>';
+    if (sh.widths) x += '<cols>' + sh.widths.map((w, i) => '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + w + '" customWidth="1"/>').join('') + '</cols>';
+    x += '<sheetData>';
+    sh.rows.forEach((row, ri) => {
+      x += '<row r="' + (ri + 1) + '">';
+      row.forEach((cell, ci) => {
+        if (cell === null || cell === undefined || cell === '') return;
+        let v = cell, st = 0;
+        if (typeof cell === 'object') { v = cell.v; st = cell.s || 0; }
+        const ref = colName(ci) + (ri + 1);
+        if (typeof v === 'number' && isFinite(v)) x += '<c r="' + ref + '"' + (st ? ' s="' + st + '"' : '') + '><v>' + v + '</v></c>';
+        else x += '<c r="' + ref + '" t="inlineStr"' + (st ? ' s="' + st + '"' : '') + '><is><t xml:space="preserve">' + xmlEsc(v) + '</t></is></c>';
+      });
+      x += '</row>';
+    });
+    x += '</sheetData></worksheet>';
+    files.push({ name: 'xl/worksheets/sheet' + (si + 1) + '.xml', data: enc.encode(x) });
+  });
+  return zipStore(files);
+}
+
+/* ---------- PDF (JPEG şəkillərdən) ---------- */
+function buildPdf(imgs) {
+  const enc = new TextEncoder(); const parts = []; let off = 0; const xref = [];
+  const push = u8 => { parts.push(u8); off += u8.length; };
+  const str = s => push(enc.encode(s));
+  const obj = (n, fn) => { xref[n] = off; str(n + ' 0 obj\n'); fn(); str('\nendobj\n'); };
+  str('%PDF-1.4\n');
+  const n = imgs.length, W = 595.276, H = 841.89;
+  obj(1, () => str('<< /Type /Catalog /Pages 2 0 R >>'));
+  obj(2, () => str('<< /Type /Pages /Kids [' + imgs.map((_, i) => (3 + 3 * i) + ' 0 R').join(' ') + '] /Count ' + n + ' >>'));
+  imgs.forEach((im, i) => {
+    const pn = 3 + 3 * i, io = 4 + 3 * i, co = 5 + 3 * i;
+    obj(pn, () => str('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + W + ' ' + H + '] /Resources << /XObject << /Im0 ' + io + ' 0 R >> >> /Contents ' + co + ' 0 R >>'));
+    obj(io, () => { str('<< /Type /XObject /Subtype /Image /Width ' + im.w + ' /Height ' + im.h + ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + im.bytes.length + ' >>\nstream\n'); push(im.bytes); str('\nendstream'); });
+    const cs = 'q ' + W + ' 0 0 ' + H + ' 0 0 cm /Im0 Do Q';
+    obj(co, () => str('<< /Length ' + cs.length + ' >>\nstream\n' + cs + '\nendstream'));
+  });
+  const total = 3 + 3 * n; const xo = off;
+  str('xref\n0 ' + total + '\n0000000000 65535 f \n');
+  for (let i = 1; i < total; i++) str(String(xref[i]).padStart(10, '0') + ' 00000 n \n');
+  str('trailer\n<< /Size ' + total + ' /Root 1 0 R >>\nstartxref\n' + xo + '\n%%EOF\n');
+  return concat(parts);
+}
+
+G.OMR = {
+  PW, PH, NS, NC, NK, NW, IDD, CCOLS, NSYM, MAXRAW, MAXC, MAXK, MAXW, MAXE, MAXROWS, TFN, WVALS, PRESETS, LETTERS, SYM, SYMLBL, CORN, ANCHORS, T_MARK, T_WEAK,
+  FLN, FLT, FLX, WBN, WB, CODE_W, defaultCfg, normalizeCfg, emptyKey, fitKey, effKey, sigOf, pageCount, totalPages, writePlan, writePageCount, writeItems, parsePat, teacherBlock, scoreBlock2, WSLBL, buildPages, renderPage, readSheet, locate, rectify, loadGray,
+  measureDbg, debugComps, normCode, parseClosedKey, closedKeyToStr, parseTfKey, tfKeyToStr, tfPoints, scoreStudent, r1,
+  buildXlsx, buildPdf, zipStore, crc32, range
+};
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+(function () {
+'use strict';
+const O = window.OMR;
+const LS_KEY = 'blok_omr_v1';
+const LET = O.LETTERS;
+const NS = O.NS;
+const SJ = () => state.cfg.subjects;
+const wTotal = () => SJ().reduce((a, s) => a + s.nW, 0);
+const eTotal = () => SJ().reduce((a, s) => a + s.nE, 0);
+const tTotal = () => SJ().reduce((a, s) => a + s.nT, 0);
+const EMAXH = () => Math.round(state.cfg.essayMax * 2);                       // esse balının yarım ballarla maksimumu
+const fmtE = x => (x == null || x < 0) ? '' : String(x / 2).replace('.', ',');
+const handLabel = () => wTotal() && eTotal() ? 'Yazılı və esse ballarını daxil et' : eTotal() ? 'Esse ballarını daxil et' : 'Yazılı balları daxil et';
+/* 2-ci səhifədəki «Yoxlayıcı üçün» dairələri: hansı tapşırıqlar üçün çap olunur (yer çatmırsa və ya esse balı çox böyükdürsə null / yalnız yazılı) */
+function sbInfo() { const b = O.scoreBlock2(state.cfg); return b ? { w: b.cols.some(x => x && x.w.length), e: b.cols.some(x => x && x.e.length) } : null; }
+function sbPhrase() { const i = sbInfo(); return !i ? '' : i.w && i.e ? 'yazılı və esse' : i.e ? 'esse' : 'yazılı'; }
+function scoreHowText() {
+  const i = sbInfo(); if (!i) return null;
+  const on = i.w && i.e ? 'Yazılı tapşırıqların və esseninin' : i.w ? 'Yazılı tapşırıqların' : 'Esseninin';
+  const lead = wbPages() ? 'Açıq tapşırıqların cavabını şagird ' + wbRange() + 'dəki xanalarda yazır, müəllim kağızdan özü yoxlayır. ' : 'Açıq tapşırıqları müəllim özü yoxlayır. ';
+  return lead + on + ' balını vərəqin 2-ci səhifəsindəki «Yoxlayıcı üçün» dairələrində boyayır, şəkil çəkiləndə sayt onu oxuyur' + (eTotal() && !i.e ? ' (esse balı isə «Nəticələr» bölməsində daxil edilir)' : '') + '. Ballar «Nəticələr» bölməsində də daxil edilə bilər.';
+}
+const hasCoded = () => SJ().some(s => s.nK > 0);
+/* yazı səhifələri: açıq tapşırıqların cavabı üçün sətirli xanalar (oxunan səhifələrdən sonra gəlir, saytda oxunmur) */
+const wbPages = () => O.writePageCount(state.cfg);
+const ordAz = n => n + '-' + ({ 1: 'ci', 2: 'ci', 3: 'cü', 4: 'cü', 5: 'ci', 6: 'cı', 7: 'ci', 8: 'ci', 9: 'cu', 0: 'cu' })[n % 10];
+const pgRange = (a, b) => a === b ? ordAz(a) : a + '–' + ordAz(b);                    // «3-cü» və ya «3–6-cı»
+const wbRange = () => { const c = state.cfg, a = O.pageCount(c) + 1, b = O.totalPages(c); return pgRange(a, b) + (a === b ? ' səhifə' : ' səhifələr'); };   // «3–6-cı səhifələr»
+const WLBL = { 0: '0', 2: '⅓', 3: '½', 4: '⅔', 6: '1' };
+const VARS = ['A', 'B', 'C', 'D'];
+
+/* ---------- köməkçilər ---------- */
+function h(tag, props, ...kids) {
+  const el = document.createElement(tag);
+  for (const k in (props || {})) {
+    const v = props[k];
+    if (v == null || v === false) continue;
+    if (k === 'class') el.className = v;
+    else if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
+    else if (k.slice(0, 2) === 'on') el.addEventListener(k.slice(2).toLowerCase(), v);
+    else if (k === 'value' || k === 'checked' || k === 'disabled' || k === 'selected') el[k] = v;
+    else if (v === true) el.setAttribute(k, '');
+    else el.setAttribute(k, v);
+  }
+  for (const c of kids.flat(Infinity)) { if (c == null || c === false) continue; el.append(c.nodeType ? c : document.createTextNode(String(c))); }
+  return el;
+}
+const SVGNS = 'http://www.w3.org/2000/svg';
+function sv(tag, props) { const el = document.createElementNS(SVGNS, tag); for (const k in props) el.setAttribute(k, props[k]); return el; }
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const fmt = x => (x == null || isNaN(x)) ? '—' : O.r1(x).toFixed(1).replace('.', ',');
+let toastT = null;
+function toast(msg, ms) {
+  let t = document.getElementById('toast'); if (t) t.remove();
+  t = h('div', { class: 'toast', id: 'toast' }, msg); document.body.append(t);
+  clearTimeout(toastT); toastT = setTimeout(() => t.remove(), ms || 3500);
+}
+function askConfirm(msg, okLabel) {
+  return new Promise(res => {
+    const root = h('div', { class: 'mback', style: { zIndex: 50 } });
+    const done = v => { root.remove(); res(v); };
+    root.append(h('div', { class: 'modal', style: { maxWidth: '440px', marginTop: '14vh' } },
+      h('div', { style: { padding: '18px' } },
+        h('p', { style: { margin: '0 0 16px', fontSize: '15px' } }, msg),
+        h('div', { class: 'row', style: { justifyContent: 'flex-end' } },
+          h('button', { class: 'btn', onclick: () => done(false) }, 'Ləğv et'),
+          h('button', { class: 'btn danger', onclick: () => done(true) }, okLabel || 'Bəli, sil')))));
+    document.body.append(root);
+  });
+}
+function debounce(fn, ms) { let t; return function () { clearTimeout(t); t = setTimeout(fn, ms); }; }
+function safeName(s) { return String(s || 'imtahan').replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, '-').slice(0, 60) || 'imtahan'; }
+function normId(id) { const t = String(id == null ? '' : id).trim(); return /^\d+$/.test(t) ? String(parseInt(t, 10)) : t; }
+
+// claude.ai-da yükləmə yalnız `downloads` imkanı ilə işləyir; adi brauzerdə <a download> istifadə olunur.
+const dlCap = (() => {
+  try { if (typeof claude !== 'undefined' && claude && typeof claude.use === 'function') return Promise.resolve(claude.use('downloads')).then(x => x || null, () => null); } catch (e) { }
+  return null;
+})();
+async function saveFile(name, data, mime) {
+  const blob = data instanceof Blob ? data : new Blob([data], { type: mime });
+  if (dlCap) {
+    const dl = await dlCap;
+    if (!dl) { toast('Bu görünüşdə fayl yükləmək mümkün deyil. Səhifəni claude.ai-da tam açın və ya saytı brauzerdə açın.', 7000); return false; }
+    try { await dl.save({ filename: name, data: blob }); return true; }
+    catch (e) {
+      const code = e && e.code;
+      if (code === 'declined') return false;
+      toast(code === 'rate_limited' ? 'Əvvəlki yükləmə sorğusu hələ açıqdır, bir az gözləyin və təkrar basın.' : 'Fayl yüklənmədi' + (e && e.message ? ': ' + e.message : ''), 7000);
+      return false;
+    }
+  }
+  const url = URL.createObjectURL(blob);
+  const a = h('a', { href: url, download: name }); document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 15000);
+  return true;
+}
+
+/* ---------- vəziyyət ---------- */
+const state = {
+  cfg: O.normalizeCfg({}), scans: [], manual: {}, essay: {}, tab: 'setup', keyVariant: 'A', keyMsg: null, keyPending: null,
+  chk: { problemOnly: false },
+  res: { q: '', sort: 'id', dir: 1 }
+};
+const thumbs = new Map();
+const IDB = (() => {
+  let dbp = null;
+  const open = () => dbp || (dbp = new Promise((res, rej) => {
+    try { const r = indexedDB.open('blok_omr_thumbs', 1); r.onupgradeneeded = () => r.result.createObjectStore('t'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); r.onblocked = () => rej(new Error('blocked')); }
+    catch (e) { rej(e); }
+  }));
+  const run = async (mode, fn) => { try { const db = await open(); return await new Promise((res, rej) => { const tx = db.transaction('t', mode); const rq = fn(tx.objectStore('t')); tx.oncomplete = () => res(rq ? rq.result : null); tx.onerror = tx.onabort = () => rej(tx.error); }); } catch (e) { return null; } };
+  return { put: (k, b) => run('readwrite', st => st.put(b, k)), get: k => run('readonly', st => st.get(k)), del: k => run('readwrite', st => st.delete(k)), clear: () => run('readwrite', st => st.clear()) };
+})();
+function dropThumb(uid) { const u = thumbs.get(uid); if (u) { try { URL.revokeObjectURL(u); } catch (e) { } thumbs.delete(uid); } IDB.del(uid); }
+let uidN = Date.now();
+let savePending = false;
+function saveNow() {
+  savePending = false;
+  try { localStorage.setItem(LS_KEY, JSON.stringify({ cfg: state.cfg, scans: state.scans, manual: state.manual, manualV: 2, essay: state.essay, keyVariant: state.keyVariant })); } catch (e) { }
+}
+const saveLater = debounce(saveNow, 400);
+function save() { savePending = true; saveLater(); }
+// səhifə bağlananda və ya gizlədiləndə, yalnız saxlanmamış dəyişiklik varsa, gözləmədən saxla (başqa pəncərədəki yeni məlumatı köhnə nüsxə əzməsin)
+const flushSave = () => { if (savePending) saveNow(); };
+window.addEventListener('pagehide', flushSave);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushSave(); });
+function load() {
+  try {
+    const j = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
+    if (j) { state.cfg = O.normalizeCfg(j.cfg); fitAllKeys(); state.scans = Array.isArray(j.scans) ? j.scans : []; normScans(); state.manual = cleanManual(j.manual, j.manualV); state.essay = cleanEssay(j.essay); state.keyVariant = j.keyVariant || 'A'; }
+  } catch (e) { }
+}
+function ensureKey(v) { if (!state.cfg.keys[v]) state.cfg.keys[v] = O.emptyKey(state.cfg); return state.cfg.keys[v]; }
+const flOn = () => !!state.cfg.fl.on;
+const flName = l => (l === 0 || l === 1) ? state.cfg.fl.n[l] : '—';
+const keyHas = k => k.closed.some(r => r.some(x => x >= 0)) || k.coded.some(r => r.some(x => String(x).trim() !== '')) || (k.tf || []).some(r => r.some(b => b.some(x => x >= 0)));
+function keyFilled(v) {
+  const k = state.cfg.keys[v]; if (!k) return false;
+  return keyHas(k) || (flOn() && !!k.alt && keyHas(k.alt));
+}
+/* şagirdin seçdiyi xarici dil üçün 1-ci fənnin açarı doldurulubmu */
+function subj0KeyFilled(v, lang) {
+  const S = state.cfg.subjects[0];
+  if (!S.nC && !S.nK && !S.nT) return true;
+  const k = O.effKey(state.cfg, v, lang); if (!k) return false;
+  return k.closed[0].some(x => x >= 0) || k.coded[0].some(x => String(x).trim() !== '') || (k.tf[0] || []).some(b => b.some(x => x >= 0));
+}
+/* vərəqin (səhifənin) şagirdi üçün xarici dil: 1-ci səhifədən götürülür */
+function langOfScan(sc) {
+  if (!flOn()) return null;
+  if (sc.page === 1) return sc.lang;
+  const p1 = state.scans.find(x => x.ok && !x.dup && x.page === 1 && x.id && x.id === sc.id);
+  return p1 ? p1.lang : null;
+}
+const effKeyOf = sc => O.effKey(state.cfg, sc.variant, langOfScan(sc));
+function filledVariants() { return VARS.filter(keyFilled); }
+
+/* ---------- şagirdlər və nəticələr ---------- */
+function rosterName(id) { return state.cfg.roster[normId(id)] || ''; }
+/* Yazılı tapşırıqların balını müəllim özü verir (altıda bir hissələrlə: 0, 2, 3, 4, 6). state.manual[5 rəqəmli nömrə] = fənn × tapşırıq balları (-1: daxil edilməyib).
+   Şagird üçün əl ilə yazılmış sətir varsa, vərəqdəki «Yoxlayıcı üçün» dairələrindən oxunmuş ballar əvəzinə o götürülür. */
+function canonId(x) { const t = String(x == null ? '' : x).trim(); return /^\d{1,5}$/.test(t) ? t.padStart(5, '0') : null; }
+function cleanManual(m, ver) {
+  const out = {};
+  if (!m || typeof m !== 'object') return out;
+  const sj = state.cfg.subjects;
+  for (const k of Object.keys(m)) {
+    const id = canonId(k), v = m[k];
+    if (!id || !Array.isArray(v)) continue;
+    out[id] = range(NS).map(a => range(sj[a].nW).map(b => {
+      let x = v[a] ? v[a][b] : undefined;
+      if (ver !== 2 && (x === 0 || x === 1 || x === 2)) x = x * 3;       // köhnə qeyd: 0/1/2 bal → altıda bir hissələrlə (0/3/6)
+      return O.WVALS.indexOf(x) >= 0 ? x : -1;
+    }));
+  }
+  return out;
+}
+/* şagirdin aktiv (təkrar olmayan) səhifə şəkli */
+function findScan(id, page) { return id ? (state.scans.find(s => s.ok && !s.dup && s.page === page && canonId(s.id) === id) || null) : null; }
+/* ballar: əl ilə yazılmış sətir → 2-ci səhifədəki «Yoxlayıcı üçün» dairələri (0, ⅓, ½, ⅔, 1) → 1-ci səhifənin altındakı dairələr (0, ½, 1) */
+function effWritten(id, p1, p2) {
+  const m = id ? state.manual[id] : null;
+  if (m) return m.map(r => r.slice());
+  if (p1 === undefined) p1 = findScan(id, 1);
+  if (p2 === undefined) p2 = findScan(id, 2);
+  return range(NS).map(a => range(SJ()[a].nW).map(b => {
+    const x2 = p2 && p2.scoresW && p2.scoresW[a] ? p2.scoresW[a][b] : -1;
+    if (x2 >= 0 && x2 < O.WVALS.length) return O.WVALS[x2];
+    const x = p1 && p1.written && p1.written[a] ? p1.written[a][b] : -1; return x >= 0 ? 3 * x : -1;
+  }));
+}
+/* Esse balını müəllim verir (0-dan essayMax-a qədər, yarım ballarla). state.essay[5 rəqəmli nömrə] = fənn × esse balları, yarım ballarla (2·bal), -1: daxil edilməyib. */
+function cleanEssay(m) {
+  const out = {};
+  if (!m || typeof m !== 'object') return out;
+  const sj = state.cfg.subjects;
+  for (const k of Object.keys(m)) {
+    const id = canonId(k), v = m[k];
+    if (!id || !Array.isArray(v)) continue;
+    out[id] = range(NS).map(a => range(sj[a].nE).map(b => { const x = v[a] ? v[a][b] : undefined; return Number.isInteger(x) && x >= 0 && x <= 40 ? x : -1; }));
+  }
+  return out;
+}
+function effEssay(id, p2) {
+  const m = id ? state.essay[id] : null;
+  if (m) return range(NS).map(a => range(SJ()[a].nE).map(b => (m[a] && m[a][b] != null) ? m[a][b] : -1));
+  if (p2 === undefined) p2 = findScan(id, 2);
+  return range(NS).map(a => range(SJ()[a].nE).map(b => { const x = p2 && p2.scoresE && p2.scoresE[a] ? p2.scoresE[a][b] : -1; return x >= 0 && x <= EMAXH() ? x : -1; }));
+}
+function parseEssay(str) {
+  const t = String(str == null ? '' : str).trim().replace(',', '.');
+  if (t === '') return -1;
+  if (!/^\d{1,2}(\.\d?)?$/.test(t)) return null;
+  const x = parseFloat(t), h2 = Math.round(x * 2);
+  if (Math.abs(h2 / 2 - x) > 1e-9 || x > state.cfg.essayMax + 1e-9) return null;
+  return h2;
+}
+/* oxunmuş vərəqlərdə doğru/yanlış cavabları (tf) cari quruluşa uyğun formaya salır */
+function normTfArr(tf) {
+  return range(NS).map(s => range(SJ()[s].nT).map(t => range(O.TFN).map(j => {
+    const v = tf && tf[s] && tf[s][t] ? tf[s][t][j] : -1;
+    return v === 0 || v === 1 || v === -2 ? v : -1;
+  })));
+}
+function normScans() {
+  for (const sc of state.scans) if (sc && sc.ok && sc.page === 1) {
+    sc.tf = normTfArr(sc.tf);
+    sc.lang = sc.lang === 0 || sc.lang === 1 || sc.lang === -2 ? sc.lang : -1;      // oxunmayıbsa «seçilməyib»
+  }
+}
+const fmtW = x => { if (x == null || isNaN(x)) return '—'; return String(Math.round(x * 100) / 100).replace('.', ','); };
+function codedStrs(sc) { return sc.cc.map(sj => sj.map(c => c.join(''))); }
+function buildStudents() {
+  const map = new Map();
+  for (const sc of state.scans) {
+    if (!sc.ok || sc.dup || !sc.id) continue;
+    let st = map.get(sc.id); if (!st) { st = { id: sc.id, p1: null, p2: null }; map.set(sc.id, st); }
+    if (sc.page === 1) st.p1 = sc; else st.p2 = sc;
+  }
+  const have = new Set([...map.keys()].map(k => canonId(k) || k));
+  const hasAny = a => a.some(r => r.some(x => x >= 0));
+  for (const id of new Set([...Object.keys(state.manual), ...Object.keys(state.essay)])) {
+    if (have.has(id) || map.has(id)) continue;
+    if ((state.manual[id] && hasAny(state.manual[id])) || (state.essay[id] && hasAny(state.essay[id]))) map.set(id, { id, p1: null, p2: null });
+  }
+  const fv = filledVariants();
+  const out = [];
+  for (const st of map.values()) {
+    const issues = [];
+    let variant = (st.p1 && st.p1.variant) || (st.p2 && st.p2.variant) || (fv.length === 1 ? fv[0] : null);
+    const lang = flOn() && st.p1 ? st.p1.lang : null;
+    if (st.p1 && st.p2 && st.p1.variant && st.p2.variant && st.p1.variant !== st.p2.variant) issues.push({ lv: 'e', m: 'Variant iki səhifədə fərqlidir (' + st.p1.variant + ' / ' + st.p2.variant + ')' });
+    if (!st.p1) issues.push({ lv: 'w', m: '1-ci səhifə (qapalı cavablar) yüklənməyib' });
+    if (!st.p2 && hasCoded()) issues.push({ lv: 'w', m: '2-ci səhifə (kodlaşdırılan cavablar) yüklənməyib' });
+    if (!variant) issues.push({ lv: 'e', m: 'Variant məlum deyil' });
+    else if (!keyFilled(variant)) issues.push({ lv: 'e', m: variant + ' variantı üçün açar daxil edilməyib' });
+    if (flOn() && st.p1) {
+      if (lang !== 0 && lang !== 1) issues.push({ lv: 'e', m: 'Xarici dil məlum deyil: şagird ' + state.cfg.fl.n.join(' / ') + ' dairəsini düzgün işarələməyib. Vərəqi açıb dili seçin.' });
+      else if (variant && keyFilled(variant) && !subj0KeyFilled(variant, lang)) issues.push({ lv: 'e', m: state.cfg.fl.n[lang] + ' üçün açar daxil edilməyib (' + variant + ' variantı)' });
+    }
+    let rosterDone = false;
+    for (const sc of [st.p1, st.p2]) if (sc && !sc.reviewed) {
+      if (sc.conflict) issues.push({ lv: 'w', m: (sc.page + '-ci səh.: ') + MSG_CONFLICT });
+      if (!rosterDone && notInRoster(sc.id)) { rosterDone = true; issues.push({ lv: 'w', m: MSG_ROSTER }); }
+      for (const f of sc.flags || []) if (!/^Xarici dil seçilməyib/.test(f.m)) issues.push({ lv: f.lv, m: (sc.page + '-ci səh.: ') + f.m });
+    }
+    const written = effWritten(canonId(st.id), st.p1, st.p2), hasW = written.some(r => r.some(x => x >= 0));
+    const essay = effEssay(canonId(st.id), st.p2), hasE = hasAny(essay);
+    const data = { variant, lang, closed: st.p1 ? st.p1.closed : null, tf: st.p1 ? st.p1.tf : null, written, coded: st.p2 ? codedStrs(st.p2) : null, essay };
+    const sc = O.scoreStudent(data, state.cfg);
+    out.push({ id: st.id, name: rosterName(st.id), variant, lang, p1: st.p1, p2: st.p2, sc, issues, data, written, hasW, essay, hasE,
+      hasErr: issues.some(i => i.lv === 'e'), hasWarn: issues.some(i => i.lv === 'w') });
+  }
+  return out;
+}
+function scanSig(sc) { return sc.page === 1 ? JSON.stringify([sc.closed, sc.tf || null, sc.written, flOn() ? sc.lang : null]) : JSON.stringify(sc.cc); }
+function markDuplicates() {
+  const groups = new Map();
+  for (const sc of state.scans) {
+    sc.dup = false; sc.conflict = false;
+    if (sc.ok && sc.id) { const k = sc.id + '|' + sc.page; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(sc); }
+  }
+  for (const g of groups.values()) {
+    if (g.length < 2) continue;
+    g.sort((x, y) => y.ts - x.ts);
+    for (let i = 1; i < g.length; i++) g[i].dup = true;
+    const s0 = scanSig(g[0]);
+    if (g.some(x => scanSig(x) !== s0)) g.forEach(x => { x.conflict = true; });
+  }
+}
+function notInRoster(id) { const r = state.cfg.roster; return Object.keys(r).length > 0 && !r[normId(id)]; }
+const MSG_CONFLICT = 'Bu nömrə ilə fərqli cavablı başqa vərəq də var: nömrə səhv işarələnmiş ola bilər. Hansının düzgün olduğuna baxıb yanlışını silin (sonuncu yüklənən götürülür).';
+const MSG_ROSTER = 'Nömrə şagird siyahısında yoxdur: nömrə səhv işarələnmiş ola bilər.';
+function scanNotes(sc) {
+  if (!sc.ok) return [sc.err];
+  const n = [];
+  if (sc.conflict && !sc.reviewed) n.push(MSG_CONFLICT);
+  if (!sc.dup && sc.id && notInRoster(sc.id) && !sc.reviewed) n.push(MSG_ROSTER);
+  if (!sc.reviewed) for (const f of sc.flags || []) n.push(f.m);
+  return n;
+}
+function scanStatus(sc) {
+  if (!sc.ok) return { cls: 'err', t: 'Oxunmadı' };
+  if (sc.dup) return sc.conflict && !sc.reviewed ? { cls: 'warn', t: 'Eyni nömrə, fərqli cavab' } : { cls: 'gray', t: 'Təkrar (əvəzlənib)' };
+  if (!sc.id) return { cls: 'err', t: 'Nömrə yoxdur' };
+  if (sc.reviewed) return { cls: 'ok', t: 'Yoxlanıb' };
+  if ((sc.flags || []).some(f => f.lv === 'e')) return { cls: 'err', t: 'Yoxlanmalıdır' };
+  if (sc.conflict) return { cls: 'warn', t: 'Nömrə təkrarlanır' };
+  if (notInRoster(sc.id)) return { cls: 'warn', t: 'Siyahıda yoxdur' };
+  if ((sc.flags || []).length) return { cls: 'warn', t: 'Diqqət' };
+  return { cls: 'ok', t: 'Oxundu' };
+}
+
+/* ---------- nişanlanmış tab ---------- */
+const TABS = [['setup', '1 · İmtahan'], ['sheet', '2 · Cavab vərəqi'], ['check', '3 · Yoxlama'], ['results', '4 · Nəticələr']];
+function setTab(t) { state.tab = t; renderAll(); window.scrollTo({ top: 0 }); }
+function renderTabs() {
+  const nav = document.getElementById('tabs'); nav.innerHTML = '';
+  for (const [k, l] of TABS) nav.append(h('button', { class: state.tab === k ? 'on' : '', onclick: () => setTab(k) }, l));
+}
+let ui = {};
+function renderAll() {
+  renderTabs(); ui = {};
+  const m = document.getElementById('main'); m.innerHTML = '';
+  m.append(({ setup: viewSetup, sheet: viewSheet, check: viewCheck, results: viewResults })[state.tab]());
+  if (state.tab === 'check') refreshCheck();
+}
+
+/* =====================  1 · İMTAHAN  ===================== */
+function formulaText(c) {
+  const pen = c.penalty ? 'Dqapalı − Yqapalı/4' : 'Dqapalı';
+  const ts = c.subjects.some(s => s.nT) ? ' + Bd/y' : '';
+  const ks = c.subjects.some(s => s.nK) ? ' + Dkod' : '';
+  const ws = c.subjects.some(s => s.nW) ? ' + 2·Dyazılı' : '';
+  const es = c.subjects.some(s => s.nE) ? ' + Esse' : '';
+  const mx = [...new Set(c.subjects.map(s => s.maxRaw))];
+  const div = mx.length === 1 ? String(mx[0]) : 'maks';
+  const mxNote = mx.length === 1 ? '' : ', burada maks = ' + c.subjects.map(s => s.maxRaw + ' (' + s.name + ')').join(', ');
+  return 'Fənn nisbi balı = (' + pen + ts + ks + ws + es + ') × 100/' + div + mxNote + (c.clampZero && c.penalty ? ' (qapalı hissə mənfi olarsa 0)' : '') + '. 0,1-ə qədər yuvarlaqlaşır. Cəmi bal = Σ (nisbi bal × əmsal)';
+}
+function structText(c) {
+  return c.subjects.map(s => s.name + ': ' + s.nC + ' qapalı' + (s.nT ? ', ' + s.nT + ' doğru/yanlış' : '') + (s.nK ? ', ' + s.nK + ' kodlaşdırılan' : '') + (s.nW ? ', ' + s.nW + ' yazılı' : '') + (s.nE ? ', ' + s.nE + ' esse' : '')).join(' · ');
+}
+function fitAllKeys() { const c = state.cfg; for (const v of Object.keys(c.keys)) c.keys[v] = O.fitKey(c.keys[v], c); }
+function clearScanData() {
+  state.scans = []; state.manual = {}; state.essay = {};
+  for (const u of thumbs.values()) { try { URL.revokeObjectURL(u); } catch (e) { } }
+  thumbs.clear(); IDB.clear();
+}
+/* quruluşu dəyiş: oxunmuş vərəqlər və əl ilə daxil edilmiş ballar köhnə quruluşa uyğun olduğu üçün təsdiq tələb olunur */
+async function changeStructure(mut) {
+  const before = O.sigOf(state.cfg);
+  const next = JSON.parse(JSON.stringify(state.cfg));
+  mut(next);
+  const n2 = O.normalizeCfg(next);
+  const hasData = state.scans.length > 0 || Object.keys(state.manual).length > 0 || Object.keys(state.essay).length > 0;
+  if (O.sigOf(n2) !== before && hasData) {
+    if (!(await askConfirm('İmtahan quruluşu dəyişəndə oxunmuş vərəqlər və əl ilə daxil edilmiş yazılı və esse ballar silinəcək (onlar köhnə quruluşa uyğundur). Əvvəlcə Excel və .json ehtiyatını yüklədiyinizdən əmin olun.', 'Bəli, quruluşu dəyiş'))) { renderAll(); return false; }
+    clearScanData();
+  }
+  state.cfg = n2; fitAllKeys();
+  save(); renderAll();
+  return true;
+}
+function presetMut(id) {
+  return n => {
+    if (id === 'custom') { n.preset = 'custom'; return; }
+    const p = O.PRESETS[id], defNames = Object.keys(O.PRESETS).map(k => O.PRESETS[k].name);
+    n.preset = id;
+    if (!n.name || defNames.indexOf(n.name) >= 0) n.name = p.name;
+    n.penalty = p.penalty; n.clampZero = p.clampZero;
+    const wasFl = n.fl && n.fl.on;
+    n.fl = { on: !!p.fl, n: (p.fl || (n.fl && n.fl.n) || O.FLN).slice() };      // buraxılış: xarici dili şagird seçir
+    if (!p.fl && wasFl && n.subjects[0].name === O.FLT) n.subjects[0].name = '1-ci fənn';
+    n.subjects.forEach((s, i) => {
+      const ps = p.subjects[i];
+      s.pat = ps.pat; s.from = ps.from;
+      if (ps.name) s.name = ps.name;
+      if (id === 'buraxilis' || id === 'buraxilis9') s.coef = 1;
+    });
+    n.essayMax = p.essayMax || 5;
+    if (p.wb) n.wb = { on: !!p.wb.on, w: p.wb.w.slice(), e: p.wb.e };       // yazı xanaları: buraxılışda açıq, blokda bağlı
+  };
+}
+
+function viewSetup() {
+  const c = state.cfg;
+  const np = O.totalPages(c), nw = wbPages();
+  const root = h('div', { class: 'stack' });
+
+  root.append(h('div', { class: 'card' },
+    h('h2', {}, 'Necə işləyir'),
+    h('ol', { class: 'steps' },
+      h('li', {}, 'Bu səhifədə imtahanı qurun: quruluş (blok və ya buraxılış), fənlərin adı, əmsalı və düzgün cavablar (açar).'),
+      h('li', {}, '«Cavab vərəqi» bölməsindən vərəqi PDF kimi yükləyib çap edin (hər şagirdə ' + np + ' səhifə' + (nw ? ': ' + O.pageCount(c) + ' oxunan və ' + nw + ' yazı səhifəsi' : '') + ').' + (c.fl.on ? ' Şagird xarici dili (' + c.fl.n.join(' / ') + ') vərəqdə özü işarələyir, sayt ona uyğun açarı götürür.' : '')),
+      h('li', {}, 'İmtahandan sonra doldurulmuş vərəqlərin şəklini telefonla çəkin və «Yoxlama» bölməsinə yükləyin: qapalı' + (hasCoded() ? ' və kodlaşdırılan' : '') + ' cavablar avtomatik yoxlanır.' + (nw ? ' Yazı səhifələrini (' + wbRange() + ') çəkmək lazım deyil.' : '')),
+      h('li', {}, scoreHowText() || (eTotal() ? (wTotal() ? 'Yazılı tapşırıqları və esseni müəllim özü yoxlayır: ballarını «Nəticələr» bölməsində sürətli daxil edin.' : 'Esseni müəllim özü yoxlayır: hər şagirdin esse balını «Nəticələr» bölməsində sürətli daxil edin.') : 'Yazılı tapşırıqları müəllim özü yoxlayır: hər şagirdin yazılı ballarını «Nəticələr» bölməsində sürətli daxil edin.')),
+      h('li', {}, 'Balları «Nəticələr» bölməsində görün və Excel faylı kimi yükləyin.')),
+    h('p', { class: 'small muted', style: { margin: '10px 0 4px' } }, 'Sayt AI və ya xarici xidmət çağırmır, heç bir kredit və ya limit getmir. Şəkillər heç bir yerə göndərilmir, hamısı bu səhifənin içində, sizin cihazda oxunur.'),
+    h('div', { class: 'formula' }, formulaText(c)),
+    h('p', { class: 'small muted', style: { margin: '6px 0 0' } }, structText(c) + '. Boş və ya yanlış kodlaşdırılan cavab bal aparmır.' + (wTotal() ? ' Yazılı tapşırığın balı: markerin verdiyi 0, ⅓, ½, ⅔ və ya 1 (düsturda 2-yə vurulur).' : '') + (tTotal() ? ' Doğru/yanlış tapşırığı (4 bənd): 4 bəndin hamısı düzdürsə 1 bal, 3-ü düzdürsə ½ bal, daha azı düzdürsə 0 (Bd/y); yanlış cavab bal aparmır.' : '') + (eTotal() ? ' Esse: müəllim 0-dan ' + String(c.essayMax).replace('.', ',') + '-ə qədər (yarım bal da olar) bal verir.' : ''))));
+
+  // ümumi
+  const nameI = h('input', { type: 'text', value: c.name, oninput: e => { c.name = e.target.value; save(); } });
+  const optS = h('select', { onchange: e => { c.nOpt = Number(e.target.value); save(); } },
+    h('option', { value: 5, selected: c.nOpt === 5 }, '5 variant (A, B, C, D, E)'), h('option', { value: 4, selected: c.nOpt === 4 }, '4 variant (A, B, C, D)'));
+  const multiS = h('select', { onchange: e => { c.multi = e.target.value; save(); } },
+    h('option', { value: 'wrong', selected: c.multi === 'wrong' }, 'Yanlış cavab sayılsın'), h('option', { value: 'blank', selected: c.multi === 'blank' }, 'Boş sayılsın'));
+  const clampC = h('input', { type: 'checkbox', checked: c.clampZero, onchange: e => { c.clampZero = e.target.checked; save(); renderAll(); } });
+  const subjRows = c.subjects.map((s, i) => h('div', { class: 'row', style: { marginBottom: '8px' } },
+    i === 0 && c.fl.on
+      ? h('div', { style: { flex: '1 1 260px' } }, h('label', { class: 'f' }, '1-ci fənn: xarici dil (şagird vərəqdə seçir). Seçimlərin adı'),
+        h('div', { class: 'row', style: { gap: '8px', flexWrap: 'nowrap' } },
+          [0, 1].map(k => h('input', { type: 'text', class: 'flname', value: c.fl.n[k], maxlength: 28, autocomplete: 'off',
+            oninput: e => { c.fl.n[k] = e.target.value.replace(/\s+/g, ' ').trim() || O.FLN[k]; save(); } }))))
+      : h('div', { style: { flex: '1 1 220px' } }, h('label', { class: 'f' }, (i + 1) + (i === 2 ? '-cü' : '-ci') + ' fənnin adı'),
+        h('input', { type: 'text', value: s.name, oninput: e => { s.name = e.target.value || ('Fənn ' + (i + 1)); save(); } })),
+    h('div', { style: { width: '130px' } }, h('label', { class: 'f' }, 'Əmsal (1 və ya 1,5)'),
+      h('input', { type: 'text', inputmode: 'decimal', value: String(s.coef).replace('.', ','), autocomplete: 'off', oninput: e => { const v = parseFloat(String(e.target.value).replace(',', '.')); s.coef = v > 0 ? v : 1; save(); } }))));
+  root.append(h('div', { class: 'card' },
+    h('h2', {}, 'Ümumi parametrlər'),
+    h('div', { class: 'grid2' },
+      h('div', {}, h('label', { class: 'f' }, 'İmtahanın adı (vərəqin başlığında çıxır)'), nameI),
+      h('div', {}, h('label', { class: 'f' }, 'Qapalı sualın cavab variantları'), optS)),
+    h('p', { class: 'small muted', style: { margin: '6px 0 12px' } }, 'Variant sayını, fənn adlarını və ya quruluşu dəyişdikdən sonra cavab vərəqini yenidən çap edin.'),
+    subjRows,
+    h('div', { class: 'grid2', style: { marginTop: '6px' } },
+      h('div', {}, h('label', { class: 'f' }, 'Qapalı sualda 2 və daha çox dairə işarələnibsə'), multiS),
+      c.penalty
+        ? h('div', {}, h('label', { class: 'f' }, 'Qapalı hissənin balı mənfi çıxarsa'),
+          h('label', { class: 'row small', style: { gap: '6px', paddingTop: '6px' } }, clampC, '0 sayılsın (DİM düsturunda belədir)'))
+        : h('div', {}, h('label', { class: 'f' }, 'Qapalı hissənin balı mənfi çıxarsa'),
+          h('div', { class: 'small muted', style: { paddingTop: '8px' } }, 'Bu quruluşda yanlış cavab bal aparmadığı üçün mənfi bal yoxdur.')))));
+
+  // quruluş
+  const presetS = h('select', { onchange: e => { changeStructure(presetMut(e.target.value)); } },
+    ['blok', 'buraxilis9', 'buraxilis'].map(k => h('option', { value: k, selected: c.preset === k }, O.PRESETS[k].label)),
+    h('option', { value: 'custom', selected: c.preset === 'custom' }, 'Xüsusi (özüm quraram)'));
+  const penS = h('select', { onchange: e => { c.penalty = e.target.value === '1'; save(); renderAll(); } },
+    h('option', { value: 1, selected: c.penalty }, 'Hər 4 yanlış 1 düzü silir (blok)'), h('option', { value: 0, selected: !c.penalty }, 'Yanlış cavab bal aparmır (buraxılış)'));
+  const patRows = c.subjects.map((s, i) => h('div', { class: 'row', style: { marginBottom: '8px', alignItems: 'flex-end' } },
+    h('div', { style: { flex: '1 1 210px' } }, h('label', { class: 'f' }, s.name + ' — tapşırıq sırası'),
+      h('input', { type: 'text', class: 'pat', value: s.pat, autocomplete: 'off', spellcheck: 'false', autocapitalize: 'characters',
+        onchange: e => { const v = e.target.value; changeStructure(n => { n.subjects[i].pat = v; n.preset = 'custom'; }); } })),
+    h('div', { style: { width: '120px' } }, h('label', { class: 'f' }, '1-ci tapşırığın nömrəsi'),
+      h('input', { type: 'text', inputmode: 'numeric', value: String(s.from), autocomplete: 'off',
+        onchange: e => { const v = parseInt(e.target.value, 10) || 1; changeStructure(n => { n.subjects[i].from = v; n.preset = 'custom'; }); } })),
+    h('div', { class: 'small muted', style: { flex: '1 1 170px' } }, s.nC + ' qapalı' + (s.nT ? ' · ' + s.nT + ' doğru/yanlış' : '') + (s.nK ? ' · ' + s.nK + ' kodlaşdırılan' : '') + (s.nW ? ' · ' + s.nW + ' yazılı' : '') + (s.nE ? ' · ' + s.nE + ' esse' : '') + ' · maks ' + String(s.maxRaw).replace('.', ',') + (s.capped ? ' · ⚠ vərəqə sığmayan artıq tapşırıqlar nəzərə alınmır' : ''))));
+  root.append(h('div', { class: 'card' },
+    h('h2', {}, 'İmtahan quruluşu'),
+    h('p', { class: 'sub' }, 'Hazır quruluşu seçin və ya hər fənnin tapşırıq sırasını özünüz yazın: C = qapalı, K = kodlaşdırılan açıq (rəqəmlə cavab), W = yazılı açıq, T = doğru/yanlış tapşırığı (4 bənd), E = esse. Məsələn «C15 W5 C5 W5» = 15 qapalı, 5 yazılı, 5 qapalı, 5 yazılı (kitabçadakı sıra ilə). Cavab vərəqində nömrələr kitabçadakı kimi çıxır.'),
+    h('div', { class: 'grid2' }, h('div', {}, h('label', { class: 'f' }, 'Hazır quruluş'), presetS), h('div', {}, h('label', { class: 'f' }, 'Yanlış qapalı cavab'), penS)),
+    h('div', { style: { height: '10px' } }),
+    h('label', { class: 'row small', style: { gap: '8px', marginBottom: '10px', alignItems: 'flex-start' } },
+      h('input', { type: 'checkbox', class: 'flon', checked: c.fl.on, style: { marginTop: '3px' }, onchange: e => { const on = e.target.checked; changeStructure(n => { n.fl.on = on; if (!on && n.subjects[0].name === O.FLT) n.subjects[0].name = n.fl.n[0]; }); } }),
+      h('span', {}, '1-ci fənn xarici dildir: şagird vərəqdə ' + c.fl.n.join(' və ya ') + ' dairəsini özü işarələyir, hər dilin düzgün cavabları (açar) ayrıca daxil edilir. Quruluş hər iki dil üçün eynidir.')),
+    patRows,
+    c.subjects.some(x => x.nE) ? h('div', { class: 'row', style: { marginTop: '4px', alignItems: 'flex-end' } },
+      h('div', { style: { width: '180px' } }, h('label', { class: 'f' }, 'Esse üçün maksimum bal'),
+        h('input', { type: 'text', class: 'essaymax', inputmode: 'decimal', value: String(c.essayMax).replace('.', ','), autocomplete: 'off',
+          onchange: e => { const v = parseFloat(String(e.target.value).replace(',', '.')); changeStructure(n => { n.essayMax = v > 0 ? v : 5; n.preset = 'custom'; }); } })),
+      h('div', { class: 'small muted', style: { flex: '1 1 260px' } }, 'Müəllim esseni 0-dan bu ədədə qədər, yarım bal dəqiqliyi ilə qiymətləndirir (məs.: 3,5). Hazır quruluşda 5.')) : null,
+    h('p', { class: 'small muted', style: { margin: '6px 0 0' } }, O.teacherBlock(c) ? 'Vərəqin altında yoxlayıcı üçün yazılı bal xanaları olacaq (həm də saytda daxil etmək olar).' : sbInfo() ? 'Vərəqin 2-ci səhifəsinin altında yoxlayıcı üçün ' + sbPhrase() + ' bal dairələri olacaq: müəllim balı dairəni boyayaraq göstərir, sayt onu oxuyur (balları həm də saytda daxil etmək olar).' + (eTotal() && !sbInfo().e ? ' Esse balı bu quruluşda saytda daxil edilir.' : '') : 'Bu quruluşda ' + (eTotal() ? (wTotal() ? 'yazılı və esse balları' : 'esse balını') : 'yazılı balları') + ' saytda daxil edəcəksiniz («Nəticələr» → «' + handLabel() + '»).')));
+
+  // yazı xanaları (açıq tapşırıqların cavabı üçün sətirli səhifələr)
+  if (wTotal() || eTotal()) {
+    const WB = c.wb, MX = O.WBN.max;
+    const lnIn = (val, cls, set) => h('input', { type: 'text', class: cls, inputmode: 'numeric', value: String(val), autocomplete: 'off', maxlength: 2,
+      onchange: e => { const x = parseInt(e.target.value, 10); if (Number.isFinite(x)) set(Math.max(0, Math.min(MX, x))); save(); renderAll(); } });
+    const rowsW = c.subjects.map((S, i) => S.nW ? h('div', { style: { width: '150px' } }, h('label', { class: 'f' }, S.name + ': yazılı tapşırığa sətir'), lnIn(WB.w[i], 'wbw wbw' + i, x => { WB.w[i] = x; })) : null);
+    const total = O.totalPages(c);
+    root.append(h('div', { class: 'card' },
+      h('h2', {}, 'Cavab yazmaq üçün xanalar'),
+      h('p', { class: 'sub' }, 'Açıq tapşırıqların (yazılı və esse) cavabı üçün vərəqin sonuna nömrəli, sətirli xanalar əlavə olunur: hər tapşırığın öz xanası, fənn zolağı altında. Bu səhifələr saytda oxunmur: şagird cavabı orada yazır, müəllim kağızdan yoxlayıb balı verir.'),
+      h('label', { class: 'row small', style: { gap: '8px', marginBottom: '10px', alignItems: 'flex-start' } },
+        h('input', { type: 'checkbox', class: 'wbon', checked: WB.on, style: { marginTop: '3px' }, onchange: e => { WB.on = e.target.checked; save(); renderAll(); } }),
+        h('span', {}, 'Açıq tapşırıqların cavabı üçün sətirli yazı xanaları əlavə et')),
+      WB.on ? h('div', { class: 'row', style: { alignItems: 'flex-end', marginBottom: '8px' } },
+        rowsW, eTotal() ? h('div', { style: { width: '150px' } }, h('label', { class: 'f' }, 'Esse üçün sətir'), lnIn(WB.e, 'wbe', x => { WB.e = x; })) : null) : null,
+      WB.on ? h('p', { class: 'small muted wbinfo', style: { margin: '4px 0 0' } }, nw
+        ? 'Yazı səhifələri: ' + nw + ' (' + wbRange() + '). Hər şagirdə cəmi ' + total + ' səhifə (' + Math.ceil(total / 2) + ' vərəq, iki üzlü çapda). Sətir sayı 0–' + MX + ' arasında olur (0 = o tapşırığa xana yoxdur). Sayı dəyişəndən sonra vərəqi yenidən çap edin; oxunan səhifələr dəyişmir.'
+        : 'Sətir sayı hər yerdə 0-dır, ona görə xana çıxmır.') : null));
+  }
+
+  // açar
+  const v = state.keyVariant; const key = ensureKey(v);
+  const seg = h('div', { class: 'seg' }, VARS.map(x => h('button', { class: x === v ? 'on' : '', onclick: () => { state.keyVariant = x; save(); renderAll(); } }, x, keyFilled(x) ? h('span', { class: 'dot' }) : null)));
+  const keyCard = h('div', { class: 'card' },
+    h('h2', {}, 'Düzgün cavablar (açar)'),
+    h('p', { class: 'sub' }, 'İmtahanda bir neçə variant varsa, hər variant üçün ayrıca açar daxil edin. Tək variant varsa, yalnız A-nı doldurun: şagird variantı boş buraxsa belə, A açarı götürülür. Qapalı cavabları kitabçadakı qapalı tapşırıqların sırası ilə yazın.' + (c.fl.on ? ' Xarici dil üçün ' + c.fl.n.join(' və ') + ' açarını ayrıca daxil edin: sayt hər şagirdin vərəqdə seçdiyi dilə uyğun açarı götürür. Azərbaycan dili və Riyaziyyatın açarı hamı üçün ortaqdır.' : '')),
+    seg);
+  const keyItems = [];
+  for (let s = 0; s < NS; s++) {
+    if (s === 0 && c.fl.on) { keyItems.push({ title: 'Xarici dil — ' + c.fl.n[0], S: c.subjects[0], K: key, s: 0 }, { title: 'Xarici dil — ' + c.fl.n[1], S: c.subjects[0], K: key.alt, s: 0 }); }
+    else keyItems.push({ title: c.subjects[s].name, S: c.subjects[s], K: key, s });
+  }
+  for (const { title, S, K, s } of keyItems) {
+    const st = h('div', { class: 'stat' });
+    const upd = (val) => {
+      const r = O.parseClosedKey(val, c.nOpt, S.nC);
+      K.closed[s] = r.arr;
+      const ok = r.count === S.nC && !r.bad && r.len === S.nC;
+      st.className = 'stat ' + (ok ? 'ok' : r.bad ? 'bad' : 'mid');
+      st.textContent = r.count + ' / ' + S.nC + ' cavab' + (r.bad ? ' · yanlış simvol və ya artıq uzunluq: ' + r.bad : '') + (r.len > 0 && r.len < S.nC ? ' · çatmır: ' + (S.nC - r.len) : '') + ' (boş sual üçün «-» yazın)';
+    };
+    const inp = h('input', { type: 'text', class: 'mono', value: O.closedKeyToStr(K.closed[s]).replace(/^-+$/, ''), placeholder: 'məs.: ' + 'ABCDEABCDEABCDEABCDEABCDEABCDE'.slice(0, Math.min(S.nC, 22)), autocapitalize: 'characters', autocomplete: 'off', spellcheck: 'false',
+      oninput: e => { upd(e.target.value); save(); } });
+    if (S.nC) upd(inp.value);
+    const coded = S.nK ? h('div', { class: 'codedkeys' }, range(S.nK).map(t => h('div', {}, h('label', { class: 'f' }, S.numK[t] + '-ci'),
+      h('input', { type: 'text', value: K.coded[s][t], autocomplete: 'off', oninput: e => { K.coded[s][t] = e.target.value; save(); } })))) : null;
+    const tfSt = h('div', { class: 'stat' });
+    const tfUpd = () => {
+      const full = range(S.nT).filter(t => K.tf[s][t].every(x => x >= 0)).length;
+      tfSt.className = 'stat ' + (full === S.nT ? 'ok' : 'mid'); tfSt.textContent = full + ' / ' + S.nT + ' tapşırığın açarı tam';
+    };
+    const tfKeys = S.nT ? h('div', { class: 'codedkeys tfkeys' }, range(S.nT).map(t => h('div', {}, h('label', { class: 'f' }, S.numT[t] + '-ci'),
+      h('input', { type: 'text', class: 'mono tfk', maxlength: 8, value: O.tfKeyToStr(K.tf[s][t]).replace(/^-+$/, ''), placeholder: 'DYYD', autocapitalize: 'characters', autocomplete: 'off', spellcheck: 'false',
+        oninput: e => { K.tf[s][t] = O.parseTfKey(e.target.value).arr; tfUpd(); save(); } })))) : null;
+    if (S.nT) tfUpd();
+    keyCard.append(h('div', { class: 'keyrow' },
+      h('div', { class: 'nm' }, title),
+      h('div', {},
+        S.nC ? [h('label', { class: 'f' }, 'Qapalı cavablar (' + S.nC + ' hərf, boşluqsuz)'), inp, st] : null,
+        S.nT ? [h('label', { class: 'f', style: { marginTop: '10px' } }, 'Doğru/yanlış tapşırıqları: hər tapşırıq üçün 4 hərf, bəndlərin sırası ilə (D = doğru, Y = yanlış, məs.: DYYD)'), tfKeys, tfSt] : null,
+        S.nK ? [h('label', { class: 'f', style: { marginTop: '10px' } }, 'Kodlaşdırılan cavablar (rəqəm, mənfi və ya vergüllü: 12, -3, 2,5)'), coded] : null,
+        !S.nC && !S.nK && !S.nT ? h('div', { class: 'small muted' }, 'Bu fənndə qapalı və ya kodlaşdırılan tapşırıq yoxdur (yalnız yazılı).') : null)));
+  }
+  const km = state.keyMsg;
+  const keyMsg = h('div', { class: km ? 'note small ' + (km.ok ? 'ok' : 'err') : 'small', style: { marginTop: '10px' } }, km ? km.text : '');
+  const keyFile = h('input', { type: 'file', accept: 'image/*', multiple: true, class: 'hide', onchange: async e => { const fs = [...e.target.files]; e.target.value = ''; await readKeyFromSheets(fs, keyMsg); } });
+  keyCard.append(h('div', { class: 'row', style: { marginTop: '12px' } },
+    h('button', { class: 'btn', onclick: () => keyFile.click() }, 'Açarı doldurulmuş vərəqin şəklindən oxu'),
+    h('button', { class: 'btn danger sm', onclick: async () => { if (await askConfirm(v + ' variantının açarı silinsin?')) { delete c.keys[v]; save(); renderAll(); } } }, v + ' açarını sil'), keyFile),
+    h('p', { class: 'small muted', style: { margin: '6px 0 0' } }, 'Müəllim bir cavab vərəqini düzgün cavablarla doldurur, hər səhifəsinin şəklini çəkib bura yükləyir. Oxunanları yuxarıda yoxlayın və lazım olsa düzəldin.'),
+    keyMsg,
+    state.keyPending && flOn() ? h('div', { class: 'row keypend', style: { marginTop: '8px' } },
+      h('span', { class: 'small' }, 'Bu cavablar hansı dilin açarıdır?'),
+      state.cfg.fl.n.map((nm, i) => h('button', { class: 'btn sm', 'data-lang': i, onclick: () => applyKeyPending(i) }, nm))) : null);
+  root.append(keyCard);
+
+  // siyahı
+  const rcount = h('span', { class: 'small muted' }, Object.keys(c.roster).length ? Object.keys(c.roster).length + ' şagird yazılıb' : '');
+  const ta = h('textarea', { rows: 5, placeholder: '101  Əliyev Əli\n102  Məmmədova Aysel\n(hər sətirdə: şagird nömrəsi və ad, soyad)', class: '',
+    oninput: e => { c.roster = parseRoster(e.target.value); rcount.textContent = Object.keys(c.roster).length + ' şagird oxundu'; save(); } });
+  ta.value = Object.keys(c.roster).map(k => k + '  ' + c.roster[k]).join('\n');
+  root.append(h('div', { class: 'card' }, h('h2', {}, 'Şagird siyahısı (istəyə bağlı)'),
+    h('p', { class: 'sub' }, 'Nömrələrə uyğun adlar nəticələrdə görünsün deyə. Excel-dən iki sütunu (nömrə, ad) kopyalayıb yapışdıra bilərsiniz.'), ta, rcount));
+
+  // saxla/yüklə
+  const cfgFile = h('input', { type: 'file', accept: '.json,application/json', class: 'hide', onchange: async e => {
+    const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+    try {
+      const j = JSON.parse(await f.text());
+      const ncfg = O.normalizeCfg(j.cfg || j);
+      const same = O.sigOf(ncfg) === O.sigOf(state.cfg);
+      state.cfg = ncfg; fitAllKeys();
+      if (j.scans) { state.scans = j.scans; normScans(); state.manual = cleanManual(j.manual, j.manualV); state.essay = cleanEssay(j.essay); markDuplicates(); }
+      else if (!same) { state.scans = []; state.manual = {}; state.essay = {}; }
+      save(); renderAll(); toast('Quraşdırma yükləndi');
+    } catch (err) { toast('Fayl oxunmadı'); }
+  } });
+  root.append(h('div', { class: 'card' }, h('h2', {}, 'Saxla / yüklə'),
+    h('p', { class: 'sub' }, 'Quraşdırma və nəticələr bu cihazın brauzerində avtomatik saxlanır, amma brauzer yaddaşı təmizlənərsə və ya başqa cihaza keçsəniz itə bilər. İmtahan bitəndən sonra Excel faylını və bu .json ehtiyat faylını mütləq yükləyin.'),
+    h('div', { class: 'row' },
+      h('button', { class: 'btn', onclick: () => saveFile(safeName(c.name) + '-layihe.json', JSON.stringify({ cfg: state.cfg, scans: state.scans, manual: state.manual, manualV: 2, essay: state.essay }), 'application/json') }, 'Hamısını fayla yaz (.json)'),
+      h('button', { class: 'btn', onclick: () => cfgFile.click() }, 'Fayldan yüklə'), cfgFile),
+    h('div', { class: 'row', style: { marginTop: '14px' } },
+      h('button', { class: 'btn danger', onclick: async () => {
+        if (await askConfirm('Oxunmuş bütün vərəqlər və ' + (eTotal() ? 'yazılı və esse' : 'yazılı') + ' ballar silinsin? Açar, fənn adları və şagird siyahısı qalacaq. (Əvvəlcə Excel və .json ehtiyatını yüklədiyinizdən əmin olun.)', 'Bəli, təmizlə')) {
+          clearScanData(); save(); renderAll(); toast('Yeni imtahan üçün təmizləndi');
+        }
+      } }, 'Yeni imtahan üçün təmizlə'))));
+  return root;
+}
+const range = O.range;
+function parseRoster(text) {
+  const r = {};
+  for (const line of String(text).split(/\r?\n/)) {
+    const m = /^\s*(\d{1,6})[\s;,.:\t-]+(.+?)\s*$/.exec(line);
+    if (m) r[normId(m[1])] = m[2];
+  }
+  return r;
+}
+async function readKeyFromSheets(files, msgEl) {
+  if (!files.length) return;
+  msgEl.className = 'note small'; msgEl.textContent = 'Oxunur…';
+  const lines = []; let variantSeen = null;
+  const results = [];
+  for (const f of files) {
+    try {
+      const img = await O.loadGray(f, 3000);
+      const r = O.readSheet(img, state.cfg);
+      results.push({ f, r });
+      if (r.ok && r.variant) variantSeen = r.variant;
+    } catch (e) { results.push({ f, r: { ok: false, err: 'Fayl açılmadı' } }); }
+    await sleep(0);
+  }
+  const v = variantSeen || state.keyVariant;
+  const key = ensureKey(v);
+  const fl = flOn(), c = state.cfg;
+  // xarici dilin 2-ci səhifəsi (kodlaşdırılan cavab) üçün dil eyni dəstdəki 1-ci səhifədən götürülür
+  const p1 = results.find(x => x.r.ok && x.r.page === 1 && (x.r.lang === 0 || x.r.lang === 1));
+  const langBatch = p1 ? p1.r.lang : null;
+  let okN = 0, pend = null;
+  for (const { f, r } of results) {
+    if (!r.ok) { lines.push(f.name + ': ' + r.err); continue; }
+    if (r.write) { lines.push(f.name + ': yazı səhifəsidir, açar üçün oxunmur'); continue; }
+    okN++;
+    if (r.page === 1) {
+      let blank = 0, multi = 0; const skipped = [];
+      const lang = fl ? r.lang : null;
+      for (let s = 0; s < NS; s++) {
+        const S = c.subjects[s];
+        // vərəqdə tamamilə boş olan fənn: mövcud açara toxunulmur (məs.: yalnız Rus dilini göstərən ikinci vərəq)
+        const covered = r.closed[s].some(a => a !== -1) || (r.tf[s] || []).some(b => b.some(a => a !== -1));
+        if (!covered) continue;
+        let K = key;
+        if (s === 0 && fl) {
+          if (lang !== 0 && lang !== 1) { skipped.push(S.name); pend = { v, closed: r.closed[0].slice(), tf: r.tf[0].map(b => b.slice()) }; continue; }
+          if (lang === 1) K = key.alt;
+        }
+        for (let q = 0; q < S.nC; q++) { const a = r.closed[s][q]; if (a >= 0) K.closed[s === 0 ? 0 : s][q] = a; else { K.closed[s][q] = -1; if (a === -2) multi++; else blank++; } }
+        for (let t = 0; t < S.nT; t++) for (let j = 0; j < O.TFN; j++) { const a = r.tf[s][t][j]; if (a >= 0) K.tf[s][t][j] = a; else { K.tf[s][t][j] = -1; if (a === -2) multi++; else blank++; } }
+      }
+      lines.push('1-ci səhifə oxundu (qapalı' + (tTotal() ? ' və doğru/yanlış' : '') + ' cavablar' + (fl && (lang === 0 || lang === 1) ? ', xarici dil: ' + c.fl.n[lang] : '') + ')' + (blank ? ', ' + blank + ' sual/bənd boşdur' : '') + (multi ? ', ' + multi + ' sualda 2+ işarə var' : '')
+        + (skipped.length ? '. Xarici dil dairəsi (' + c.fl.n.join(' / ') + ') boyanmayıb, ona görə 1-ci fənnin cavabları hələ açara yazılmayıb — aşağıdan dili seçin' : ''));
+    } else {
+      for (let s = 0; s < NS; s++) {
+        const S = c.subjects[s];
+        if (!S.nK || !r.coded[s].some(x => x !== '' && x != null && String(x).replace(/\s/g, '') !== '')) continue;
+        let K = key;
+        if (s === 0 && fl) { if (langBatch !== 0 && langBatch !== 1) continue; if (langBatch === 1) K = key.alt; }
+        for (let t = 0; t < S.nK; t++) K.coded[s][t] = r.coded[s][t];
+      }
+      lines.push('2-ci səhifə oxundu (kodlaşdırılan cavablar)');
+    }
+  }
+  state.keyPending = pend;
+  state.keyVariant = v; state.keyMsg = { ok: okN > 0, text: (okN ? 'Açar ' + v + ' variantına yazıldı: ' : 'Açar oxunmadı: ') + lines.join(' · ') + (okN ? '. Xanaları yuxarıda yoxlayın.' : '') };
+  save(); renderAll();
+}
+
+/* xarici dil dairəsi boyanmamış açar vərəqinin 1-ci fənn cavablarını seçilən dilin açarına yaz */
+function applyKeyPending(i) {
+  const p = state.keyPending; if (!p) return;
+  const c = state.cfg, S = c.subjects[0];
+  if (p.closed.length !== S.nC || p.tf.length !== S.nT) { state.keyPending = null; toast('Quraşdırma dəyişib — açar vərəqinin şəklini yenidən yükləyin'); renderAll(); return; }
+  const key = ensureKey(p.v), K = i === 1 ? key.alt : key;
+  let blank = 0, multi = 0;
+  for (let q = 0; q < S.nC; q++) { const a = p.closed[q]; if (a >= 0) K.closed[0][q] = a; else { K.closed[0][q] = -1; if (a === -2) multi++; else blank++; } }
+  for (let t = 0; t < S.nT; t++) for (let j = 0; j < O.TFN; j++) { const a = p.tf[t][j]; if (a >= 0) K.tf[0][t][j] = a; else { K.tf[0][t][j] = -1; if (a === -2) multi++; else blank++; } }
+  state.keyPending = null; state.keyVariant = p.v;
+  state.keyMsg = { ok: true, text: 'Xarici dil açarı (' + c.fl.n[i] + ') ' + p.v + ' variantına yazıldı' + (blank ? ', ' + blank + ' sual/bənd boşdur' : '') + (multi ? ', ' + multi + ' sualda 2+ işarə var' : '') + '. Xanaları yuxarıda yoxlayın.' };
+  save(); renderAll();
+}
+
+/* =====================  2 · CAVAB VƏRƏQİ  ===================== */
+function viewSheet() {
+  const c = state.cfg, nO = O.pageCount(c), nw = wbPages(), np = nO + nw;
+  const root = h('div', { class: 'stack' });
+  const prev = h('div', { class: 'previews' });
+  range(np).forEach(i => prev.append(O.renderPage(c, i + 1, 3.6)));
+  const busy = h('span', { class: 'small muted' });
+  async function pageJpeg(pn) {
+    const cv = O.renderPage(c, pn, 11.811);   // 300 dpi
+    const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.93));
+    return { bytes: new Uint8Array(await blob.arrayBuffer()), w: cv.width, h: cv.height };
+  }
+  const hasW = wTotal() > 0, hasE = eTotal() > 0;
+  const handName = hasW ? (hasE ? 'Yazılı tapşırıqlar və esse' : 'Yazılı tapşırıqlar') : 'Esse';
+  const handVerb = nw ? 'yazı səhifələrində yazılır' : 'ayrıca kağızda yazılır';
+  const closedName = tTotal() ? 'qapalı və doğru/yanlış cavablar' : 'qapalı cavablar';
+  const pgList = ['1-ci səhifədə ' + closedName].concat(nO === 2 ? ['2-ci səhifədə kodlaşdırılan cavablar'] : [], nw ? [wbRange().replace(/ səhifə(lər)?$/, '') + (nw > 1 ? ' səhifələrdə' : ' səhifədə') + ' açıq tapşırıqların cavabı üçün sətirli xanalar'] : []);
+  const sub = (np > 1
+    ? 'Hər şagird üçün ' + np + ' səhifə' + (nw ? ' (' + Math.ceil(np / 2) + ' vərəq, iki üzlü çapda)' : '') + ': ' + pgList.join(', ') + '.'
+    : 'Hər şagird üçün 1 səhifə (' + closedName + ').')
+    + (hasW || hasE ? ' ' + handName + ' ' + handVerb + '. ' + (O.teacherBlock(c) ? 'Yoxlayıcı onların balını 1-ci səhifənin altındakı xanalara qeyd edir (və ya sonra saytda daxil edir).' : sbInfo() ? 'Yoxlayıcı onların balını 2-ci səhifənin altındakı «Yoxlayıcı üçün» dairələrində boyayır (və ya sonra saytda daxil edir).' : 'Yoxlayıcı onların balını sonra saytda daxil edir.') : '');
+  root.append(h('div', { class: 'card' },
+    h('h2', {}, 'Çap üçün cavab vərəqi'),
+    h('p', { class: 'sub' }, sub),
+    h('div', { class: 'row' },
+      h('button', { class: 'btn primary', onclick: async e => { e.target.disabled = true; busy.textContent = 'PDF hazırlanır…'; try { const arr = []; for (let i = 1; i <= np; i++) arr.push(await pageJpeg(i)); await saveFile(safeName(c.name) + '-cavab-vereqi.pdf', O.buildPdf(arr), 'application/pdf'); busy.textContent = ''; } catch (err) { busy.textContent = 'Xəta: ' + err.message; } e.target.disabled = false; } }, 'PDF yüklə (' + np + ' səhifə)'),
+      range(np).map(i => h('button', { class: 'btn', onclick: async () => { const j = await pageJpeg(i + 1); saveFile(safeName(c.name) + '-sehife' + (i + 1) + '.jpg', new Blob([j.bytes], { type: 'image/jpeg' })); } }, ordAz(i + 1) + ' səhifə (JPG)')),
+      busy)));
+  root.append(h('div', { class: 'card' }, h('h2', {}, 'Çap qaydaları'),
+    h('ul', { style: { margin: '6px 0 0', paddingLeft: '20px' } },
+      h('li', {}, 'A4 kağızda, «Faktiki ölçü / 100%» seçimi ilə çap edin. Vərəqdəki 4 künc və kənar qara kvadratlar tam çıxmalıdır, kəsilməməlidir.'),
+      h('li', {}, 'Mümkünsə qara-ağ lazer printer və ya surətçıxaran istifadə edin, çap aydın olsun.'),
+      h('li', {}, 'Şagirdlər dairələri qara qələm və ya yumşaq karandaşla tam boyamalıdır. Düzəliş üçün yaxşı silgi lazımdır.'),
+      h('li', {}, 'Şagirdlər öz nömrəsini və variantı (varsa)' + (flOn() ? ', həmçinin xarici dili' : '') + ' da dairələri boyamaqla göstərir.'),
+      nw ? h('li', {}, 'Yazı səhifələrində (' + wbRange() + ') şagird cavabı nömrəsinə uyğun xanada qara və ya tünd göy qələmlə yazır, dairə boyamır. Bu səhifələr saytda oxunmur: müəllim kağızdan yoxlayıb balı verir. Şəkil çəkərkən yalnız oxunan səhifələri (' + (nO === 2 ? '1-ci və 2-ci' : '1-ci') + ') çəkin; yazı səhifəsini səhvən yükləsəniz, sayt onu tanıyıb keçəcək.') : null,
+      np > 1 ? h('li', {}, 'İki üzlü çap seçsəniz (uzun kənardan çevirmə), 1-ci və 2-ci səhifələr bir vərəqin iki üzündə çıxır' + (nw ? ', yazı səhifələri isə sonrakı vərəqlərdə' : '') + '.') : null,
+      sbInfo() ? h('li', {}, 'Yoxlayıcı açıq tapşırığın balını 2-ci səhifənin altındakı dairələrdə qara qələmlə boyayır, sonra vərəqin şəkli çəkilir. Yazılı tapşırıqda dairələr: 0, ⅓, ½, ⅔ və 1 (tam bal)' + (sbInfo().e ? '; esse üçün 0-dan ' + String(c.essayMax).replace('.', ',') + '-ə qədər, yarım ballarla' : '') + '.') : null,
+      tTotal() ? h('li', {}, 'Doğru/yanlış tapşırıqlarının hər bəndində iki dairə var: sol dairə «doğru», sağ dairə «yanlış». Hər bənddə yalnız birini boyayın.') : null)));
+  root.append(h('div', { class: 'card' }, h('h2', {}, 'Önbaxış'), prev));
+  return root;
+}
+
+/* =====================  3 · YOXLAMA  ===================== */
+function viewCheck() {
+  const root = h('div', { class: 'stack' });
+  const inp = h('input', { type: 'file', accept: 'image/*', multiple: true, class: 'hide', onchange: e => { const fs = [...e.target.files]; e.target.value = ''; processFiles(fs); } });
+  const drop = h('label', { class: 'drop' }, inp, h('b', {}, 'Cavab vərəqlərinin şəkillərini seçin'), h('div', { class: 'muted' }, 'və ya bura sürüşdürüb buraxın (bir neçə yüz şəkli birdən seçmək olar)'));
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+  drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); processFiles([...e.dataTransfer.files].filter(f => /^image\//.test(f.type) || /\.(jpe?g|png|webp)$/i.test(f.name))); });
+  root.append(h('div', { class: 'card' }, h('h2', {}, 'Doldurulmuş vərəqlər'), drop,
+    h('p', { class: 'small muted', style: { margin: '10px 0 0' } }, 'Şəkil çəkərkən: vərəq düz stolda olsun, işıqlı yerdə, kölgə düşmədən; telefonu vərəqin üstündən düz tutun; vərəqin 4 küncündəki və kənarlardakı qara kvadratlar tam görünsün. 1-ci və 2-ci səhifələri istənilən sırada yükləyə bilərsiniz: sayt onları şagird nömrəsinə görə birləşdirir.' + (wbPages() ? ' Yazı səhifələrini (' + wbRange() + ') çəkmək lazım deyil: səhvən yükləsəniz, sayt onları tanıyıb keçir.' : ''))));
+  ui.check = { prog: h('div', { class: 'card hide' }), summary: h('div', { class: 'cards3' }), table: h('div', {}), };
+  root.append(ui.check.prog, h('div', { class: 'card' }, h('h2', {}, 'Oxunan şəkillər'), ui.check.summary,
+    h('div', { class: 'row', style: { margin: '12px 0 8px' } },
+      h('label', { class: 'row small', style: { gap: '6px' } }, h('input', { type: 'checkbox', checked: state.chk.problemOnly, onchange: e => { state.chk.problemOnly = e.target.checked; refreshCheck(); } }), 'Yalnız diqqət tələb edənlər'),
+      h('button', { class: 'btn sm danger', onclick: async () => { if (state.scans.length && await askConfirm('Bütün oxunmuş şəkillərin nəticələri silinsin?' + (Object.keys(state.manual).length || Object.keys(state.essay).length ? ' (Əl ilə daxil etdiyiniz yazılı' + (eTotal() ? ' və esse' : '') + ' ballar qalacaq.)' : ''), 'Hamısını sil')) { state.scans = []; for (const u of thumbs.values()) { try { URL.revokeObjectURL(u); } catch (e) { } } thumbs.clear(); IDB.clear(); save(); refreshCheck(); } } }, 'Hamısını təmizlə')),
+    ui.check.table));
+  return root;
+}
+const prog = { run: false, done: 0, total: 0, cur: '' };
+function refreshCheck() {
+  const U = ui.check; if (!U || !U.table.isConnected && !document.contains(U.table)) { }
+  if (!U) return;
+  // proqres
+  if (prog.run || prog.total) {
+    U.prog.classList.remove('hide'); U.prog.innerHTML = '';
+    U.prog.append(h('b', {}, prog.run ? 'Oxunur: ' + prog.done + ' / ' + prog.total : 'Tamamlandı: ' + prog.done + ' / ' + prog.total),
+      h('div', { class: 'bar' }, h('i', { style: { width: (prog.total ? 100 * prog.done / prog.total : 0) + '%' } })),
+      h('div', { class: 'small muted' }, prog.run ? prog.cur : ''));
+  }
+  const sc = state.scans;
+  const ok = sc.filter(s => s.ok && !s.dup && s.id);
+  const students = new Set(ok.map(s => s.id)).size;
+  const probs = sc.filter(s => { const t = scanStatus(s); return t.cls === 'err' || t.cls === 'warn'; }).length;
+  U.summary.innerHTML = '';
+  for (const [n, l] of [[sc.length, 'şəkil'], [students, 'şagird'], [ok.filter(s => s.page === 1).length, '1-ci səhifə']].concat(hasCoded() ? [[ok.filter(s => s.page === 2).length, '2-ci səhifə']] : [], [[probs, 'diqqət tələb edir']]))
+    U.summary.append(h('div', { class: 'kpi' }, h('b', {}, n), h('span', {}, l)));
+  const rows = sc.slice().reverse().filter(s => { if (!state.chk.problemOnly) return true; const t = scanStatus(s); return t.cls === 'err' || t.cls === 'warn'; });
+  const tb = h('table', { class: 't' }, h('thead', {}, h('tr', {}, ['Fayl', 'Səhifə', 'Nömrə', 'Variant'].concat(flOn() ? ['Dil'] : [], ['Vəziyyət', 'Qeyd', '']).map(x => h('th', {}, x)))));
+  const body = h('tbody');
+  for (const s of rows.slice(0, 700)) {
+    const t = scanStatus(s);
+    const note = scanNotes(s).join(' · ');
+    body.append(h('tr', {},
+      h('td', {}, s.file), h('td', {}, s.ok ? s.page : '—'), h('td', {}, s.id || '—'), h('td', {}, s.variant || '—'),
+      flOn() ? h('td', {}, s.ok && s.page === 1 ? flName(s.lang) : '—') : null,
+      h('td', {}, h('span', { class: 'pill ' + t.cls }, t.t)),
+      h('td', { style: { whiteSpace: 'normal', maxWidth: '460px', fontSize: '12.5px', color: '#5d6878' } }, note),
+      h('td', {}, s.ok ? h('button', { class: 'btn sm', onclick: () => openEditor(s.uid) }, 'Bax / düzəlt') : null,
+        ' ', h('button', { class: 'btn sm danger', onclick: () => { state.scans = state.scans.filter(x => x.uid !== s.uid); dropThumb(s.uid); markDuplicates(); save(); refreshCheck(); } }, 'Sil'))));
+  }
+  tb.append(body);
+  U.table.innerHTML = '';
+  if (!rows.length) U.table.append(h('p', { class: 'muted' }, sc.length ? 'Diqqət tələb edən şəkil yoxdur.' : 'Hələ şəkil yüklənməyib.'));
+  else { U.table.append(h('div', { class: 'tblwrap' }, tb)); if (rows.length > 700) U.table.append(h('p', { class: 'small muted' }, 'İlk 700 sətir göstərilir.')); }
+}
+async function processFiles(files) {
+  if (!files.length) return;
+  if (prog.run) { toast('Əvvəlki yükləmə bitməyib'); return; }
+  files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+  prog.run = true; prog.done = 0; prog.total = files.length; prog.cur = '';
+  let lastPaint = 0, nWrite = 0;
+  const added = [];
+  for (const f of files) {
+    prog.cur = f.name;
+    const uid = 's' + (++uidN);
+    let rec;
+    try {
+      const img = await O.loadGray(f, 3000);
+      const res = O.readSheet(img, state.cfg, { rectify: 3 });
+      if (!res.ok) rec = { uid, file: f.name, ts: Date.now(), ok: false, err: res.err, flags: [] };
+      else if (res.write) { rec = null; nWrite++; }      // yazı səhifəsi: oxunmur, siyahıya düşmür
+      else {
+        rec = { uid, file: f.name, ts: Date.now(), ok: true, page: res.page, id: res.id, variant: res.variant,
+          closed: res.closed, tf: res.tf, written: res.written, cc: res.cc, scoresW: res.scoresW || null, scoresE: res.scoresE || null, flags: res.flags, scale: res.scale };
+        if (res.page === 1) { rec.cc = null; rec.lang = res.lang == null ? -1 : res.lang; } else { rec.closed = null; rec.tf = null; rec.written = null; }
+        if (res.rect) {
+          const cv = document.createElement('canvas'); cv.width = res.rect.w; cv.height = res.rect.h;
+          cv.getContext('2d').putImageData(new ImageData(res.rect.data, res.rect.w, res.rect.h), 0, 0);
+          const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.72));
+          thumbs.set(uid, URL.createObjectURL(blob)); IDB.put(uid, blob);
+        }
+      }
+    } catch (e) {
+      rec = { uid, file: f.name, ts: Date.now(), ok: false, err: 'Fayl oxunmadı (' + (e && e.message ? e.message : 'format dəstəklənmir') + '). iPhone-un HEIC şəkli varsa JPG kimi göndərin.', flags: [] };
+    }
+    if (rec) { state.scans.push(rec); added.push(rec); }
+    prog.done++;
+    markDuplicates();
+    const now = performance.now();
+    if (now - lastPaint > 350 || prog.done === prog.total) { lastPaint = now; if (state.tab === 'check') refreshCheck(); }
+    await sleep(0);
+  }
+  prog.run = false; prog.cur = '';
+  save();
+  if (state.tab === 'check') refreshCheck();
+  const bad = added.filter(s => !s.ok).length;
+  toast('Oxuma bitdi: ' + files.length + ' şəkil' + (nWrite ? ', ' + nWrite + ' yazı səhifəsi keçildi (saytda oxunmur)' : '') + (bad ? ', ' + bad + ' şəkil oxunmadı' : ''), 5000);
+}
+
+/* =====================  REDAKTOR  ===================== */
+function nextProblemUid(uid) {
+  const list = state.scans.slice().reverse().filter(s => s.ok && (!s.dup || s.conflict));
+  const i = list.findIndex(s => s.uid === uid);
+  for (let k = 1; k < list.length; k++) {
+    const s = list[(i + k) % list.length];
+    const t = scanStatus(s);
+    if (t.cls === 'err' || t.cls === 'warn') return s.uid;
+  }
+  return null;
+}
+let dirty = false;
+function removeModal() { const m = document.getElementById('modalroot'); if (m) m.remove(); }
+function closeModal() {
+  removeModal();
+  if (dirty) { dirty = false; if (state.tab === 'check') refreshCheck(); if (state.tab === 'results') renderAll(); }
+}
+function openEditor(uid) {
+  const sc = state.scans.find(s => s.uid === uid); if (!sc || !sc.ok) return;
+  removeModal();
+  const c = state.cfg, nOpt = c.nOpt;
+  const touch = () => { sc.reviewed = true; dirty = true; save(); paintOverlay(); paintAll(); paintPill(); if (state.tab === 'check') refreshCheck(); };
+  const root = h('div', { class: 'mback', id: 'modalroot', onclick: e => { if (e.target === root) closeModal(); } });
+  const modal = h('div', { class: 'modal' });
+  const imgbox = h('div', { class: 'imgbox' });
+  const url = thumbs.get(uid);
+  const svg = sv('svg', { viewBox: '0 0 210 297', preserveAspectRatio: 'none' });
+  if (url) imgbox.append(h('img', { src: url, alt: 'vərəq' }));
+  else {
+    const noImg = h('div', { class: 'note small', style: { margin: '10px' } }, 'Şəkil yüklənir…');
+    imgbox.append(noImg, h('div', { style: { aspectRatio: '210/297' } }));
+    IDB.get(uid).then(b => {
+      if (!imgbox.isConnected) return;
+      if (b) { const u = URL.createObjectURL(b); thumbs.set(uid, u); imgbox.innerHTML = ''; imgbox.append(h('img', { src: u, alt: 'vərəq' }), svg); }
+      else noImg.textContent = 'Şəkil bu cihazda saxlanmayıb. Redaktə yenə də mümkündür; şəkli görmək üçün onu yenidən yükləyin.';
+    });
+  }
+  imgbox.append(svg);
+  const P = O.buildPages(c)[sc.page - 1];
+  function circle(b, fill, stroke, w) { svg.append(sv('circle', { cx: b.x, cy: b.y, r: b.r * 0.92, fill: fill || 'none', stroke: stroke || 'none', 'stroke-width': w || 0.5, 'fill-opacity': 0.45 })); }
+  function paintOverlay() {
+    svg.innerHTML = '';
+    const key = effKeyOf(sc);
+    for (const g of P.groups) {
+      if (g.t === 'cl') {
+        const a = sc.closed[g.a][g.b], k = key ? key.closed[g.a][g.b] : -1;
+        if (a >= 0) circle(g.bub[a], k < 0 ? '#1f5fd0' : a === k ? '#17803f' : '#c0332b');
+        if (a === -2) svg.append(sv('rect', { x: g.bub[0].x - 4, y: g.bub[0].y - 3.2, width: g.bub[g.bub.length - 1].x - g.bub[0].x + 8, height: 6.4, fill: '#ffb300', 'fill-opacity': 0.35 }));
+        if (k >= 0 && a !== k) circle(g.bub[k], 'none', '#17803f', 0.7);
+      } else if (g.t === 'tf') {
+        const a = sc.tf[g.a][g.b][g.c], kt = key && key.tf && key.tf[g.a] && key.tf[g.a][g.b] ? key.tf[g.a][g.b][g.c] : -1;
+        if (a >= 0) circle(g.bub[a], kt < 0 ? '#1f5fd0' : a === kt ? '#17803f' : '#c0332b');
+        if (a === -2) svg.append(sv('rect', { x: g.bub[0].x - 4, y: g.bub[0].y - 3.2, width: g.bub[1].x - g.bub[0].x + 8, height: 6.4, fill: '#ffb300', 'fill-opacity': 0.35 }));
+        if (kt >= 0 && a !== kt) circle(g.bub[kt], 'none', '#17803f', 0.7);
+      } else if (g.t === 'wr') { const v = sc.written[g.a][g.b]; if (v >= 0) circle(g.bub[v], '#1f5fd0'); else if (v === -2) circle(g.bub[0], '#ffb300'); }
+      else if (g.t === 'ws' || g.t === 'es') { const arr = g.t === 'ws' ? sc.scoresW : sc.scoresE; const v = arr && arr[g.a] ? arr[g.a][g.b] : -1; if (v >= 0) circle(g.bub[v], '#1f5fd0'); else if (v === -2) g.bub.forEach(b => circle(b, '#ffb300')); }
+      else if (g.t === 'cd') { const ch = sc.cc[g.a][g.b][g.c]; if (ch && ch !== '?') circle(g.bub[O.SYM.indexOf(ch)], '#1f5fd0'); else if (ch === '?') svg.append(sv('rect', { x: g.bub[0].x - 2, y: g.bub[0].y - 2, width: 4, height: 60, fill: '#ffb300', 'fill-opacity': 0.4 })); }
+      else if (g.t === 'id') { if (sc.id) circle(g.bub[Number(sc.id[g.a])], '#1f5fd0'); }
+      else if (g.t === 'var') { const i = LET.indexOf(sc.variant); if (i >= 0) circle(g.bub[i], '#1f5fd0'); }
+      else if (g.t === 'fl') { if (sc.lang === 0 || sc.lang === 1) circle(g.bub[sc.lang], '#1f5fd0'); else if (sc.lang === -2) g.bub.forEach(b => circle(b, '#ffb300')); }
+    }
+  }
+  const form = h('div', { class: 'stack' });
+  const idI = h('input', { type: 'text', maxlength: 5, value: sc.id || '', inputmode: 'numeric', placeholder: '5 rəqəm', style: { width: '110px' }, oninput: e => { const v = e.target.value.replace(/\D/g, ''); e.target.value = v; sc.id = v.length === 5 ? v : (v.length ? v : null); if (v.length && v.length < 5) sc.id = null; markDuplicates(); touch(); title.textContent = titleText(); } });
+  const varS = h('select', { class: 'sm', onchange: e => { sc.variant = e.target.value || null; touch(); } },
+    h('option', { value: '' }, '—'), VARS.map(x => h('option', { value: x, selected: sc.variant === x }, x)));
+  const langS = sc.page === 1 && flOn() ? h('select', { class: 'sm lang', onchange: e => { sc.lang = e.target.value === '' ? -1 : Number(e.target.value); touch(); } },
+    h('option', { value: '' }, '—'), c.fl.n.map((nm, k) => h('option', { value: k, selected: sc.lang === k }, nm))) : null;
+  const title = h('h2', {}, '');
+  const pill = h('span', { class: 'pill' });
+  function paintPill() { const t = scanStatus(sc); pill.className = 'pill ' + t.cls; pill.textContent = t.t; }
+  paintPill();
+  const titleText = () => (sc.page + '-ci səhifə · nömrə ' + (sc.id || '?') + (rosterName(sc.id) ? ' · ' + rosterName(sc.id) : '') + ' · ' + sc.file);
+  title.textContent = titleText();
+  form.append(h('div', { class: 'row' }, h('div', {}, h('label', { class: 'f' }, 'Şagird nömrəsi'), idI), h('div', {}, h('label', { class: 'f' }, 'Variant'), varS),
+    langS ? h('div', {}, h('label', { class: 'f' }, 'Xarici dil'), langS) : null,
+    h('div', { style: { marginLeft: 'auto' } }, pill)));
+  if ((sc.flags || []).length) form.append(h('div', { class: 'note warn small' }, sc.flags.map(f => h('div', {}, '• ' + f.m))));
+  const paints = [];
+  function paintAll() { paints.forEach(f => f()); }
+  function appendScoreCards() {
+    if (wTotal() > 0) {
+      const wr = h('div', { class: 'cols3' });
+      const effW = effWritten(canonId(sc.id), sc.page === 1 ? sc : undefined, sc.page === 2 ? sc : undefined);
+      for (let s = 0; s < NS; s++) {
+        const S = c.subjects[s];
+        const sels = range(S.nW).map(t => h('select', { class: 'sm', onchange: e => {
+            const id = canonId(sc.id);
+            if (!id) { toast('Əvvəlcə şagird nömrəsini (5 rəqəm) düzgün yazın'); e.target.value = effW[s][t] < 0 ? '' : String(effW[s][t]); return; }
+            effW[s][t] = e.target.value === '' ? -1 : Number(e.target.value);
+            setWritten(id, s, t, effW[s][t]); touch();
+          } },
+          h('option', { value: '' }, '—'), O.WVALS.map(v => h('option', { value: v, selected: effW[s][t] === v }, WLBL[v]))));
+        wr.append(h('div', {}, h('b', {}, S.name), S.nW ? h('div', { class: 'row', style: { marginTop: '4px' } }, sels.map((x, t) => h('div', {}, h('label', { class: 'f' }, S.numW[t] + '-ci'), x))) : h('div', { class: 'small muted' }, 'Yazılı tapşırıq yoxdur')));
+      }
+      form.append(h('div', { class: 'card' }, h('h3', { style: { marginTop: 0 } }, 'Yazılı tapşırıqların balı'), h('p', { class: 'small muted', style: { margin: '0 0 8px' } }, 'Markerin verdiyi bal: 0, ⅓, ½, ⅔ və ya 1. Boş qalan tapşırıq 0 bal sayılır, amma nəticələrdə «yazılı?» qeydi qalır. Çoxlu şagird üçün «Nəticələr» bölməsindəki sürətli daxiletmədən istifadə edin.' + (O.scoreBlock2(c) ? ' Ballar vərəqin 2-ci səhifəsindəki «Yoxlayıcı üçün» dairələrindən oxunur; burada dəyişsəniz, bu şagirdin ballarını sayt əl ilə daxil edilmiş kimi saxlayır.' : '')), wr));
+    }
+    if (eTotal() > 0) {
+      const er = h('div', { class: 'cols3' });
+      const effE = effEssay(canonId(sc.id), sc.page === 2 ? sc : undefined);
+      for (let s = 0; s < NS; s++) {
+        const S = c.subjects[s];
+        if (!S.nE) continue;
+        const sels = range(S.nE).map(t => h('select', { class: 'sm esel', onchange: e => {
+            const id = canonId(sc.id);
+            if (!id) { toast('Əvvəlcə şagird nömrəsini (5 rəqəm) düzgün yazın'); e.target.value = effE[s][t] < 0 ? '' : String(effE[s][t]); return; }
+            effE[s][t] = e.target.value === '' ? -1 : Number(e.target.value);
+            setEssay(id, s, t, effE[s][t]); touch();
+          } },
+          h('option', { value: '' }, '—'), range(EMAXH() + 1).map(v => h('option', { value: v, selected: effE[s][t] === v }, fmtE(v)))));
+        er.append(h('div', {}, h('b', {}, S.name), h('div', { class: 'row', style: { marginTop: '4px' } }, sels.map((x, t) => h('div', {}, h('label', { class: 'f' }, S.numE[t] + '-ci'), x)))));
+      }
+      form.append(h('div', { class: 'card' }, h('h3', { style: { marginTop: 0 } }, 'Esse balı'), h('p', { class: 'small muted', style: { margin: '0 0 8px' } }, 'Müəllimin verdiyi bal: 0-dan ' + fmtE(EMAXH()) + '-ə qədər, yarım bal da olar. Boş qalan esse 0 bal sayılır, amma nəticələrdə «esse?» qeydi qalır. Çoxlu şagird üçün «Nəticələr» bölməsindəki sürətli daxiletmədən istifadə edin.'), er));
+    }
+  }
+  if (sc.page === 1) {
+    const cols = h('div', { class: 'cols3' });
+    for (let s = 0; s < NS; s++) {
+      const S = c.subjects[s];
+      const tb = h('table', { class: 'ce' });
+      const btns = [], tfBlocks = [];
+      for (const L of S.lay) {
+        if (L.k === 'C') {
+          const q = L.i;
+          const tr = h('tr', {}, h('th', {}, S.numC[q])); const row = [];
+          for (let o = 0; o < nOpt; o++) {
+            const b = h('button', { class: 'opt', type: 'button', onclick: () => { sc.closed[s][q] = sc.closed[s][q] === o ? -1 : o; touch(); } }, LET[o]);
+            row.push(b); tr.append(h('td', {}, b));
+          }
+          btns[q] = { tr, row }; tb.append(tr);
+        } else {
+          const t = L.i, info = h('span', { class: 'tfinfo' });
+          tb.append(h('tr', {}, h('th', { colspan: nOpt + 1, class: 'tfh' }, S.numT[t] + ' · doğru/yanlış ', info)));
+          const rowsT = [];
+          for (let j = 0; j < O.TFN; j++) {
+            const tr = h('tr', {}, h('th', {}, S.numT[t] + '.' + (j + 1))); const row = [];
+            [['D', 0, 'doğru'], ['Y', 1, 'yanlış']].forEach(([lb, o, tt]) => {
+              const b = h('button', { class: 'opt', type: 'button', title: tt, onclick: () => { sc.tf[s][t][j] = sc.tf[s][t][j] === o ? -1 : o; touch(); } }, lb);
+              row.push(b); tr.append(h('td', {}, b));
+            });
+            rowsT.push({ tr, row }); tb.append(tr);
+          }
+          tfBlocks.push({ t, info, rowsT });
+        }
+      }
+      paints.push(() => {
+        const key = effKeyOf(sc);
+        for (let q = 0; q < S.nC; q++) {
+          const a = sc.closed[s][q], k = key ? key.closed[s][q] : -1, { tr, row } = btns[q];
+          tr.className = a === -2 ? 'multi' : '';
+          row.forEach((b, o) => { b.className = 'opt' + (a === o ? ' on' + (k < 0 ? '' : a === k ? ' ok' : ' bad') : '') + (k === o && a !== o ? ' key' : ''); });
+        }
+        for (const { t, info, rowsT } of tfBlocks) {
+          const kt = key && key.tf && key.tf[s] ? key.tf[s][t] : null;
+          rowsT.forEach(({ tr, row }, j) => {
+            const a = sc.tf[s][t][j], k = kt ? kt[j] : -1;
+            tr.className = a === -2 ? 'multi' : '';
+            row.forEach((b, o) => { b.className = 'opt' + (a === o ? ' on' + (k < 0 ? '' : a === k ? ' ok' : ' bad') : '') + (k === o && a !== o ? ' key' : ''); });
+          });
+          const r = O.tfPoints(sc.tf[s][t], kt);
+          info.textContent = r ? '· ' + r.c + '/' + O.TFN + ' düz → ' + String(r.pts).replace('.', ',') + ' bal' : '';
+        }
+      });
+      const nameEl = h('b', {}, S.name);
+      if (s === 0 && flOn()) paints.push(() => { nameEl.textContent = S.name + ' — ' + (sc.lang === 0 || sc.lang === 1 ? c.fl.n[sc.lang] : 'dil seçilməyib'); });
+      cols.append(h('div', {}, nameEl, S.rows ? tb : h('div', { class: 'small muted' }, 'Qapalı tapşırıq yoxdur')));
+    }
+    form.append(h('div', { class: 'card' }, h('h3', { style: { marginTop: 0 } }, tTotal() ? 'Qapalı və doğru/yanlış cavablar' : 'Qapalı cavablar'), h('p', { class: 'small muted', style: { margin: '0 0 8px' } }, 'Yaşıl: düz, qırmızı: səhv, yaşıl haşiyə: düzgün cavab (şagird fərqli işarələyibsə). Sarı sətir: 2+ işarə. Düyməyə basaraq cavabı düzəldin; eyni düyməyə təkrar basmaq cavabı boş edir.' + (tTotal() ? ' Doğru/yanlış bəndlərində D = doğru, Y = yanlış.' : '')), cols));
+    appendScoreCards();
+  } else {
+    const cols = h('div', { class: 'stack' });
+    for (let s = 0; s < NS; s++) {
+      const S = c.subjects[s];
+      if (!S.nK) continue;
+      const key = () => effKeyOf(sc);
+      const inps = range(S.nK).map(t => {
+        const i = h('input', { type: 'text', maxlength: 5, value: sc.cc[s][t].join(''), autocomplete: 'off', oninput: e => {
+          const v = e.target.value.replace(/\s/g, '').replace(/\./g, ',').replace(/[−–]/g, '-');
+          const arr = v.split('').slice(0, 5); while (arr.length < 5) arr.push(''); sc.cc[s][t] = arr; touch();
+        } });
+        return h('div', {}, h('label', { class: 'f' }, S.numK[t] + '-ci'), i);
+      });
+      const marks = range(S.nK).map(t => h('span', { class: 'small' }));
+      paints.push(() => {
+        const k = key();
+        marks.forEach((m, t) => {
+          const kk = k ? O.normCode(k.coded[s][t]) : '', ans = O.normCode(sc.cc[s][t].join(''));
+          m.textContent = !kk ? '' : (ans === kk ? '✓' : (ans ? '✗ ' + kk : '— ' + kk)); m.style.color = ans === kk && kk ? '#17803f' : '#c0332b';
+        });
+      });
+      cols.append(h('div', {}, h('b', {}, S.name), h('div', { class: 'cinp', style: { marginTop: '4px' } }, inps), h('div', { class: 'cinp', style: { marginTop: '2px' } }, marks.map(m => h('div', {}, m)))));
+    }
+    form.append(h('div', { class: 'card' }, h('h3', { style: { marginTop: 0 } }, 'Kodlaşdırılan cavablar'), h('p', { class: 'small muted', style: { margin: '0 0 8px' } }, 'Sayt dairələrdən oxuduğu cavabı göstərir (məs.: 12, -3, 2,5). Səhvdirsə düzəldin. «✗» yanında düzgün cavab yazılır.'), cols));
+    if (O.scoreBlock2(c)) appendScoreCards();
+  }
+  const nxt = nextProblemUid(sc.uid);
+  const finish = (go) => { sc.reviewed = true; dirty = true; save(); markDuplicates(); closeModal(); if (go) openEditor(go); };
+  form.append(h('div', { class: 'row' },
+    nxt ? h('button', { class: 'btn primary', onclick: () => finish(nxt) }, 'Təsdiq et və növbəti problemli vərəq →') : null,
+    h('button', { class: nxt ? 'btn' : 'btn primary', onclick: () => finish(null) }, 'Təsdiq et və bağla'),
+    h('button', { class: 'btn', onclick: closeModal }, 'Bağla')));
+  modal.append(h('div', { class: 'mh' }, title, h('button', { class: 'btn sm', onclick: closeModal }, '✕')),
+    h('div', { class: 'mb' }, h('div', { class: 'imgcol' }, imgbox), form));
+  root.append(modal); document.body.append(root);
+  paintOverlay(); paintAll();
+}
+
+/* yazılı balların sürətli daxil edilməsi (balları müəllim verir).
+   Hər rəqəm tapşırığın balıdır, altıda bir hissələrlə: 0 = 0, 2 = ⅓, 3 = ½, 4 = ⅔, 6 = tam (1). «-» = hələ daxil edilməyib. */
+const WCH = '02346';
+function wChunk(chars) {
+  const t = chars.map(x => x < 0 ? '-' : String(x)), out = []; let i = 0;
+  for (const n of SJ().map(s => s.nW)) { if (n && i < t.length) out.push(t.slice(i, i + n).join('')); i += n; }
+  return out.join(' ');
+}
+function wStr(arr) {
+  const flat = [].concat(...arr); let last = -1;
+  flat.forEach((x, i) => { if (x >= 0) last = i; });
+  return last < 0 ? '' : wChunk(flat.slice(0, last + 1));
+}
+function wChars(str) {
+  const out = [];
+  for (const ch of String(str)) {
+    if (WCH.indexOf(ch) >= 0) out.push(+ch);
+    else if (ch === '-') out.push(-1);
+  }
+  return out;
+}
+function wExample() {
+  const pool = '634602'; let k = 0;
+  return SJ().filter(s => s.nW).map(s => range(s.nW).map(() => pool[k++ % pool.length]).join('')).join(' ');
+}
+function setManualFromChars(id, chars) {
+  let k = 0;
+  state.manual[id] = range(NS).map(a => range(SJ()[a].nW).map(() => { const v = chars[k++]; return v === undefined ? -1 : v; }));
+  dirty = true; save();
+}
+function setWritten(id, a, b, v) {
+  const m = state.manual[id] || (state.manual[id] = effWritten(id));
+  m[a][b] = v;
+  dirty = true; save();
+}
+function setEssay(id, a, b, v) {
+  const m = state.essay[id] || (state.essay[id] = effEssay(id));
+  m[a][b] = v;
+  dirty = true; save();
+}
+function maskedInput(el, onChange) {
+  const tot = wTotal();
+  // yanlış simvol (1, 5, 7-9, hərf, boşluq) seçilmiş mətni silməsin: daxil olmadan bloklanır
+  el.addEventListener('beforeinput', e => {
+    if (e.cancelable && e.inputType === 'insertText' && e.data != null && e.data !== '' && !/[02346\-]/.test(e.data)) e.preventDefault();
+  });
+  el.addEventListener('input', e => {
+    const raw = el.value, pos = el.selectionStart == null ? raw.length : el.selectionStart;
+    const chars = []; let before = 0, i = 0;
+    for (const ch of raw) {
+      const v = WCH.indexOf(ch) >= 0 ? +ch : ch === '-' ? -1 : null;
+      if (v !== null && chars.length < tot) { chars.push(v); if (i < pos) before++; }
+      i += ch.length;
+    }
+    const str = wChunk(chars);
+    if (el.value !== str) el.value = str;
+    let p = 0, seen = 0;
+    while (p < str.length && seen < before) { if (str[p] !== ' ') seen++; p++; }
+    try { el.setSelectionRange(p, p); } catch (err) { }
+    onChange(chars, e);
+  });
+}
+function writtenUniverse() {
+  const ids = new Set();
+  for (const sc of state.scans) { const id = sc.ok && sc.id ? canonId(sc.id) : null; if (id) ids.add(id); }
+  for (const k of Object.keys(state.cfg.roster)) { const id = canonId(k); if (id) ids.add(id); }
+  for (const k of Object.keys(state.manual)) ids.add(k);
+  for (const k of Object.keys(state.essay)) ids.add(k);
+  return [...ids].sort();
+}
+function openWritten() {
+  const tot = wTotal(), totE = eTotal();
+  if (!tot && !totE) { toast('Bu quruluşda yazılı və ya esse tapşırığı yoxdur'); return; }
+  removeModal();
+  const c = state.cfg;
+  const root = h('div', { class: 'mback', id: 'modalroot', onclick: e => { if (e.target === root) closeModal(); } });
+  const view = { q: '', only: false };
+  let p1m = new Map(), p2m = new Map(), rows = [];
+  const counter = h('b', {});
+  const holder = h('div');
+  const msg = h('div', { class: 'small', style: { marginTop: '6px' } });
+  const msgE = h('div', { class: 'small', style: { marginTop: '6px' } });
+  const all = tot + totE;
+  const curArr = id => effWritten(id, p1m.get(id) || null, p2m.get(id) || null);
+  const curEss = id => effEssay(id, p2m.get(id) || null);
+  const cnt2 = a => a.reduce((x, row) => x + row.filter(v => v >= 0).length, 0);
+  const cntOf = id => cnt2(curArr(id)) + cnt2(curEss(id));
+  const isFull = id => cntOf(id) === all;
+  function countAll() {
+    const ids = writtenUniverse(); let full = 0;
+    for (const id of ids) if (isFull(id)) full++;
+    counter.textContent = full + ' / ' + ids.length;
+  }
+  function paintRow(r) {
+    const n = cntOf(r.id);
+    r.stat.className = 'wst' + (n === all ? ' ok' : n ? ' mid' : '');
+    r.stat.textContent = n === all ? '✓' : n ? n + '/' + all : '';
+    r.src.textContent = (tot && !state.manual[r.id] && cnt2(curArr(r.id))) || (totE && !state.essay[r.id] && cnt2(curEss(r.id))) ? 'vərəqdən' : '';
+  }
+  const go = (r, d, k) => { const n = rows[rows.indexOf(r) + d]; const f = n && n.fields[k]; if (f) { f.focus(); f.select(); } };
+  function build() {
+    p1m = new Map(); p2m = new Map();
+    for (const sc of state.scans) if (sc.ok && !sc.dup && sc.id && (sc.page === 1 || sc.page === 2)) (sc.page === 1 ? p1m : p2m).set(canonId(sc.id) || sc.id, sc);
+    let ids = writtenUniverse();
+    const qq = view.q.trim().toLowerCase();
+    if (qq) ids = ids.filter(id => id.includes(qq) || String(parseInt(id, 10)).includes(qq) || rosterName(id).toLowerCase().includes(qq));
+    if (view.only) ids = ids.filter(id => !isFull(id));
+    const tbody = h('tbody'); rows = [];
+    for (const id of ids) {
+      const fields = [], cellKids = [];
+      const r = { id, fields, stat: h('span', { class: 'wst' }), src: h('span', { class: 'small muted' }) };
+      if (tot) {
+        const inp = h('input', { type: 'text', class: 'wsc mono', inputmode: 'numeric', autocomplete: 'off', spellcheck: 'false', placeholder: wExample(), value: wStr(curArr(id)), maxlength: tot + SJ().length, style: { width: Math.max(150, Math.ceil((tot + Math.max(0, SJ().filter(x => x.nW).length - 1)) * 10.8 + 22)) + 'px' } });
+        r.inp = inp; fields.push(inp);
+        maskedInput(inp, (chars, e) => {
+          setManualFromChars(id, chars); paintRow(r); countAll();
+          if (chars.length === tot && /^insert/.test((e && e.inputType) || '') && inp.selectionStart === inp.value.length) {
+            if (fields.length > 1) { fields[1].focus(); fields[1].select(); } else go(r, 1, 0);
+          }
+        });
+        // fokus/toxunuşda bütün mətn seçilir: yeni rəqəmlər köhnələrini əvəz edir; ikinci toxunuş kursoru yerləşdirir
+        let fresh = false;
+        const selAll = () => { try { inp.setSelectionRange(0, inp.value.length); } catch (err) { } };
+        inp.addEventListener('focus', () => { fresh = true; const v0 = inp.value; selAll(); setTimeout(() => { if (fresh && inp.value === v0) selAll(); }, 0); });
+        inp.addEventListener('mouseup', ev => { if (fresh) { ev.preventDefault(); selAll(); } });
+        inp.addEventListener('click', () => { if (fresh) { selAll(); fresh = false; } });
+        inp.addEventListener('input', () => { fresh = false; });
+        inp.addEventListener('blur', () => { fresh = false; });
+        cellKids.push(inp);
+      }
+      if (totE) {
+        const ev0 = curEss(id);
+        SJ().forEach((S, s) => range(S.nE).forEach(t => {
+          const ei = h('input', { type: 'text', class: 'esc mono', inputmode: 'decimal', autocomplete: 'off', spellcheck: 'false', maxlength: 4, placeholder: '0–' + fmtE(EMAXH()), value: fmtE(ev0[s][t]) });
+          ei.addEventListener('input', () => {
+            const v = parseEssay(ei.value);
+            if (v === null) { ei.classList.add('bad'); return; }
+            ei.classList.remove('bad');
+            setEssay(id, s, t, v); paintRow(r); countAll();
+          });
+          ei.addEventListener('focus', () => { try { ei.select(); } catch (err) { } });
+          ei.addEventListener('blur', () => { const v = parseEssay(ei.value); ei.value = fmtE(v === null ? curEss(id)[s][t] : v); ei.classList.remove('bad'); });
+          fields.push(ei); cellKids.push(h('label', { class: 'esl' }, totE > 1 ? 'Esse ' + S.numE[t] : 'Esse', ei));
+        }));
+      }
+      fields.forEach((f, k) => f.addEventListener('keydown', ev => {
+        if (ev.key === 'Enter' || ev.key === 'ArrowDown') { ev.preventDefault(); go(r, 1, k); }
+        else if (ev.key === 'ArrowUp') { ev.preventDefault(); go(r, -1, k); }
+      }));
+      rows.push(r);
+      const nm = rosterName(id);
+      tbody.append(h('tr', {}, h('td', {}, h('b', {}, id), nm ? h('div', { class: 'small muted', style: { whiteSpace: 'normal' } }, nm) : null), h('td', {}, h('div', { class: 'qe' }, cellKids)), h('td', {}, r.stat, h('div', { class: 'small muted' }, r.src))));
+      paintRow(r);
+    }
+    const heads = ['Şagird', tot ? 'Ballar (' + tot + ' rəqəm)' + (totE ? ' və esse (0–' + fmtE(EMAXH()) + ')' : '') : 'Esse balı (0–' + fmtE(EMAXH()) + ')', ''];
+    holder.innerHTML = '';
+    holder.append(rows.length
+      ? h('div', { class: 'tblwrap', style: { maxHeight: '48vh' } }, h('table', { class: 't qt' }, h('thead', {}, h('tr', {}, heads.map(x => h('th', { style: { whiteSpace: 'normal' } }, x)))), tbody))
+      : h('p', { class: 'muted' }, view.only ? 'Hamısı doldurulub.' : 'Şagird yoxdur. Vərəqləri yükləyin, şagird siyahısı əlavə edin və ya aşağıdakı «Siyahı yapışdır» bölməsindən istifadə edin.'));
+    countAll();
+  }
+  const search = h('input', { type: 'text', placeholder: 'Nömrə və ya ad axtar…', style: { maxWidth: '220px' }, oninput: e => { view.q = e.target.value; build(); } });
+  const only = h('input', { type: 'checkbox', onchange: e => { view.only = e.target.checked; build(); } });
+  const ta = tot ? h('textarea', { rows: 5, class: 'mono', placeholder: '10001 ' + wExample() + '\n10002 ' + wExample().replace(/ /g, '') + '\n(hər sətirdə: şagird nömrəsi və ' + tot + ' rəqəm; Excel-dən kopyalaya bilərsiniz)' }) : null;
+  const apply = tot ? h('button', { class: 'btn', onclick: () => {
+    let ok = 0, bad = 0;
+    for (const line of ta.value.split(/\r?\n/)) {
+      if (!line.trim()) continue;
+      const m = /^\s*(\d{1,5})[\s;,.:]+(.+?)\s*$/.exec(line);
+      const id = m ? canonId(m[1]) : null;
+      const okChars = m && !/[^02346\-\s,;.]/.test(m[2]);
+      const ch = okChars ? wChars(m[2]) : [];
+      if (!id || !ch.length || ch.length > tot) { bad++; continue; }
+      setManualFromChars(id, ch); ok++;
+    }
+    msg.style.color = ok ? '#17803f' : '#c0332b';
+    msg.textContent = ok + ' sətir tətbiq olundu' + (bad ? ', ' + bad + ' sətir keçildi (nömrə və ya rəqəmlər düzgün deyil: yalnız 0, 2, 3, 4, 6 və ən çox ' + tot + ' rəqəm)' : '');
+    build();
+  } }, 'Tətbiq et') : null;
+  const taE = totE ? h('textarea', { rows: 4, class: 'mono', placeholder: '10001 3,5\n10002 4\n(hər sətirdə: şagird nömrəsi və esse balı' + (totE > 1 ? ' (' + totE + ' bal, boşluqla ayrılmış)' : '') + '; Excel-dən kopyalaya bilərsiniz)' }) : null;
+  const applyE = totE ? h('button', { class: 'btn', onclick: () => {
+    let ok = 0, bad = 0;
+    for (const line of taE.value.split(/\r?\n/)) {
+      if (!line.trim()) continue;
+      const m = /^\s*(\d{1,5})[\s;]+(.+?)\s*$/.exec(line);
+      const id = m ? canonId(m[1]) : null;
+      const vals = m ? m[2].split(/[\s;]+/).filter(Boolean).map(parseEssay) : [];
+      if (!id || !vals.length || vals.length > totE || vals.some(v => v === null || v < 0)) { bad++; continue; }
+      let k = 0;
+      state.essay[id] = range(NS).map(a => range(SJ()[a].nE).map(() => { const v = vals[k++]; return v === undefined ? -1 : v; }));
+      dirty = true; save(); ok++;
+    }
+    msgE.style.color = ok ? '#17803f' : '#c0332b';
+    msgE.textContent = ok + ' sətir tətbiq olundu' + (bad ? ', ' + bad + ' sətir keçildi (nömrə və ya bal düzgün deyil: 0-dan ' + fmtE(EMAXH()) + '-ə qədər, yarım bal dəqiqliyi ilə)' : '');
+    build();
+  } }, 'Tətbiq et') : null;
+  const wipe = h('button', { class: 'btn danger sm', onclick: async () => {
+    if (!Object.keys(state.manual).length && !Object.keys(state.essay).length) { toast('Əl ilə daxil edilmiş bal yoxdur'); return; }
+    if (await askConfirm('Əl ilə daxil edilmiş bütün ' + (tot && totE ? 'yazılı və esse ballar' : totE ? 'esse ballar' : 'yazılı ballar') + ' silinsin?' + (tot ? ' (Vərəqdəki dairələrdən oxunmuş ballar qalacaq.)' : ''), 'Bəli, sil')) { state.manual = {}; state.essay = {}; dirty = true; save(); build(); }
+  } }, 'Əl ilə daxil edilənləri sil');
+  const withW = c.subjects.filter(x => x.nW);
+  root.append(h('div', { class: 'modal', style: { maxWidth: '760px' } },
+    h('div', { class: 'mh' }, h('h2', {}, tot ? (totE ? 'Yazılı və esse balları' : 'Yazılı tapşırıqların balı') : 'Esse balları'), h('button', { class: 'btn sm', onclick: closeModal }, 'Bitdi')),
+    h('div', { style: { padding: '12px 16px' } },
+      tot ? h('p', { class: 'small', style: { margin: '0 0 6px' } }, 'Hər şagird üçün ' + tot + ' rəqəm yazın: fənlər üzrə yazılı tapşırıqların balı (' + withW.map(x => x.name + ' ' + x.nW).join(', ') + ' sırası ilə). Hər rəqəm markerin verdiyi balı göstərir (altıda bir hissələrlə): 6 = tam (1), 4 = ⅔, 3 = yarım (½), 2 = ⅓, 0 = sıfır. Məsələn: ' + wExample() + '. Hələ yoxlanmayan tapşırıq üçün «-» yazın.') : null,
+      totE ? h('p', { class: 'small', style: { margin: '0 0 6px' } }, 'Esse balını 0-dan ' + fmtE(EMAXH()) + '-ə qədər yazın, yarım bal da olar (məs.: 3,5 və ya 3.5). Boş qalan esse hələ yoxlanmamış sayılır.') : null,
+      h('p', { class: 'small muted', style: { margin: '0 0 8px' } }, 'Enter və ↓ növbəti şagirdə keçir, ↑ geri qayıdır' + (tot ? '. Yazılı rəqəmlərin sonuncusundan sonra növbəti xanaya avtomatik keçir. Vərəqdəki «Yoxlayıcı üçün» dairələrindən oxunmuş ballar (varsa) əvvəlcədən görünür; sətri dəyişsəniz yalnız sizin yazdığınız götürülür' : '') + '.'),
+      h('div', { class: 'row', style: { margin: '0 0 8px' } }, search,
+        h('label', { class: 'row small', style: { gap: '6px' } }, only, 'Yalnız tam olmayanlar'),
+        h('span', { class: 'small muted', style: { marginLeft: 'auto' } }, 'Tam doldurulub: ', counter)),
+      holder,
+      tot ? [msg, h('details', { style: { marginTop: '10px' } }, h('summary', { style: { cursor: 'pointer', fontWeight: 600 } }, 'Siyahı yapışdır (Excel-dən)'),
+        h('div', { style: { marginTop: '8px' } }, ta, h('div', { class: 'row', style: { marginTop: '8px' } }, apply)))] : null,
+      totE ? [msgE, h('details', { style: { marginTop: '10px' } }, h('summary', { style: { cursor: 'pointer', fontWeight: 600 } }, 'Esse ballarının siyahısını yapışdır (Excel-dən)'),
+        h('div', { style: { marginTop: '8px' } }, taE, h('div', { class: 'row', style: { marginTop: '8px' } }, applyE)))] : null,
+      h('div', { class: 'row', style: { marginTop: '12px' } }, wipe))));
+  document.body.append(root);
+  build();
+}
+
+/* =====================  4 · NƏTİCƏLƏR  ===================== */
+function viewResults() {
+  const c = state.cfg;
+  const all = buildStudents();
+  const root = h('div', { class: 'stack' });
+  const totals = all.filter(s => s.sc.hasKey).map(s => s.sc.total);
+  const avg = totals.length ? totals.reduce((a, b) => a + b, 0) / totals.length : null;
+  const maxTot = 100 * c.subjects.reduce((a, s) => a + s.coef, 0);
+  const hasW = wTotal() > 0, hasE = eTotal() > 0;
+  root.append(h('div', { class: 'cards3' },
+    h('div', { class: 'kpi' }, h('b', {}, all.length), h('span', {}, 'şagird')),
+    h('div', { class: 'kpi' }, h('b', {}, fmt(avg)), h('span', {}, 'orta ümumi bal (maks. ' + fmt(maxTot) + ')')),
+    h('div', { class: 'kpi' }, h('b', {}, totals.length ? fmt(Math.max(...totals)) : '—'), h('span', {}, 'ən yüksək')),
+    h('div', { class: 'kpi' }, h('b', {}, totals.length ? fmt(Math.min(...totals)) : '—'), h('span', {}, 'ən aşağı')),
+    h('div', { class: 'kpi' }, h('b', {}, all.filter(s => s.hasErr || s.hasWarn).length), h('span', {}, 'yoxlanmalı')),
+    hasW || hasE ? h('div', { class: 'kpi' }, h('b', {}, all.filter(s => s.sc.incomplete).length), h('span', {}, (hasW ? (hasE ? 'yazılı/esse balı' : 'yazılı balı') : 'esse balı') + ' tam deyil')) : null));
+  const needKey = filledVariants().length === 0;
+  if (needKey) root.append(h('div', { class: 'note warn' }, 'Açar daxil edilməyib: «1 · İmtahan» bölməsində düzgün cavabları yazın və ya açar vərəqinin şəklini oxudun. Bundan sonra ballar avtomatik hesablanacaq.'));
+  const q = h('input', { type: 'text', placeholder: 'Nömrə və ya ad axtar…', value: state.res.q, style: { maxWidth: '240px' }, oninput: e => { state.res.q = e.target.value; paintTable(); } });
+  const tblHold = h('div');
+  const cmp = {
+    id: (a, b) => a.id.localeCompare(b.id), name: (a, b) => a.name.localeCompare(b.name, 'az'), total: (a, b) => a.sc.total - b.sc.total,
+    prob: (a, b) => (b.hasErr * 2 + b.hasWarn) - (a.hasErr * 2 + a.hasWarn),
+  };
+  for (let s = 0; s < NS; s++) cmp['s' + s] = (a, b) => a.sc.subj[s].weighted - b.sc.subj[s].weighted;
+  function paintTable() {
+    let rows = all.slice();
+    const qq = state.res.q.trim().toLowerCase();
+    if (qq) rows = rows.filter(r => r.id.includes(qq) || r.name.toLowerCase().includes(qq));
+    rows.sort((a, b) => state.res.dir * cmp[state.res.sort](a, b));
+    const th = (k, label, cls) => h('th', { class: 'sortable ' + (cls || ''), rowspan: 2, onclick: () => { if (state.res.sort === k) state.res.dir *= -1; else { state.res.sort = k; state.res.dir = (k === 'total' || k.startsWith('s')) ? -1 : 1; } paintTable(); } }, label + (state.res.sort === k ? (state.res.dir > 0 ? ' ▲' : ' ▼') : ''));
+    const h1 = h('tr', {}, th('id', 'Nömrə'), th('name', 'Ad'), h('th', { rowspan: 2 }, 'Var.'), flOn() ? h('th', { rowspan: 2, title: 'Şagirdin vərəqdə seçdiyi xarici dil' }, 'Dil') : null);
+    const h2 = h('tr', {});
+    for (let s = 0; s < NS; s++) {
+      h1.append(h('th', { class: 'grp', colspan: 5 }, c.subjects[s].name + ' (×' + String(c.subjects[s].coef).replace('.', ',') + ')'));
+      ['Düz', 'Yan.', 'Kod', 'Yaz.', 'Bal'].forEach((x, i) => h2.append(h('th', { class: 'n' + (i === 0 ? ' gl' : ''), title: [tTotal() ? 'Düz qapalı cavab sayı + doğru/yanlış tapşırıqlarının balı' : 'Düz qapalı cavab sayı', 'Yanlış qapalı cavab sayı', 'Düz kodlaşdırılan cavab sayı', eTotal() ? 'Yazılı tapşırıqların xalı + esse balı' : 'Yazılı tapşırıqların xalı', 'Fənnin nisbi balı (0–100) əmsala vurulmuş'][i] }, x)));
+    }
+    h1.append(th('total', 'Cəmi', 'n gl'), th('prob', 'Vəziyyət'), h('th', { rowspan: 2 }, 'Vərəq'));
+    const tb = h('tbody');
+    for (const r of rows) {
+      const tr = h('tr', { class: 'clk', onclick: e => { if (e.target.closest('button')) return; if (r.p1 || r.p2) openEditor((r.p1 || r.p2).uid); else openWritten(); } },
+        h('td', {}, r.id), h('td', {}, r.name), h('td', {}, r.variant || '—'), flOn() ? h('td', {}, flName(r.lang)) : null);
+      r.sc.subj.forEach((x, si) => {
+        const S = c.subjects[si];
+        tr.append(h('td', { class: 'n gl' }, r.p1 && S.rows ? fmtW(x.D + x.Tp) : '—'), h('td', { class: 'n' }, r.p1 && S.nC ? x.Y : '—'), h('td', { class: 'n' }, r.p2 && S.nK ? x.K : '—'), h('td', { class: 'n' }, (r.hasW && S.nW) || (r.hasE && S.nE) ? fmtW(x.Wp + x.Ep) : '—'),
+          h('td', { class: 'n', style: { fontWeight: 600 } }, r.sc.hasKey ? fmt(x.weighted) : '—'));
+      });
+      const stCls = r.hasErr ? 'err' : r.hasWarn ? 'warn' : 'ok';
+      tr.append(h('td', { class: 'n tot gl' }, r.sc.hasKey ? fmt(r.sc.total) : '—'),
+        h('td', { title: r.issues.map(i => i.m).join('\n') }, h('span', { class: 'pill ' + stCls }, r.hasErr ? 'Yoxla' : r.hasWarn ? 'Diqqət' : 'OK'), r.sc.incomplete ? h('span', { class: 'small muted' }, (r.sc.subj.some(x => x.wMissing) ? ' yazılı?' : '') + (r.sc.subj.some(x => x.eMissing) ? ' esse?' : '') + (r.sc.langMissing ? ' dil?' : '')) : null),
+        h('td', {}, r.p1 ? h('button', { class: 'btn sm', onclick: () => openEditor(r.p1.uid) }, '1') : null, ' ', r.p2 ? h('button', { class: 'btn sm', onclick: () => openEditor(r.p2.uid) }, '2') : null));
+      tb.append(tr);
+    }
+    tblHold.innerHTML = '';
+    tblHold.append(rows.length ? h('div', { class: 'tblwrap' }, h('table', { class: 't' }, h('thead', {}, h1, h2), tb)) : h('p', { class: 'muted' }, all.length ? 'Axtarışa uyğun şagird yoxdur.' : 'Hələ nəticə yoxdur. «Yoxlama» bölməsində şəkilləri yükləyin.'));
+  }
+  root.append(h('div', { class: 'card' },
+    h('div', { class: 'row', style: { marginBottom: '10px' } }, h('h2', { style: { margin: 0 } }, 'Şagirdlərin balları'), q,
+      h('div', { style: { marginLeft: 'auto' }, class: 'row' },
+        hasW || hasE ? h('button', { class: 'btn primary', onclick: openWritten }, handLabel()) : null,
+        h('button', { class: 'btn', onclick: () => exportXlsx(all) }, 'Excel yüklə (.xlsx)'))),
+    h('p', { class: 'small muted', style: { margin: '0 0 8px' } }, 'Düz/Yan. qapalı cavablardır (' + (c.penalty ? 'Y 4-ə bölünüb düzlərdən çıxılır' : 'yanlış cavab bal aparmır') + (tTotal() ? '; Düz-ə doğru/yanlış tapşırıqlarının balı da əlavə olunur: 4 düz bənd = 1, 3 düz bənd = ½' : '') + '), Kod: düz kodlaşdırılan cavab sayı, Yaz.: ' + (wTotal() ? 'yazılı tapşırıqların xalı (markerin balı × 2, müəllim verir)' : '') + (wTotal() && eTotal() ? ' və ' : '') + (eTotal() ? 'esse balı (müəllim verir)' : '') + (wTotal() || eTotal() ? '' : 'yazılı tapşırıqların xalı') + ', Bal: fənnin nisbi balı (0–100) əmsala vurulmuş. Sətrə basıb vərəqə baxa və düzəliş edə bilərsiniz.'),
+    tblHold));
+  paintTable();
+  root.append(itemAnalysis(all));
+  return root;
+}
+
+function itemStats(all, v, lang) {      // lang: null = hamısı; 0/1 = yalnız həmin xarici dili seçənlər (1-ci fənn üçün)
+  const c = state.cfg, SJL = c.subjects, key = O.effKey(c, v, lang == null ? 0 : lang);
+  const cl = range(NS).map(s => range(SJL[s].nC).map(() => ({ D: 0, Y: 0, B: 0, cnt: [0, 0, 0, 0, 0, 0, 0, 0] })));
+  const cd = range(NS).map(s => range(SJL[s].nK).map(() => ({ D: 0, Y: 0, B: 0 })));
+  const tf = range(NS).map(s => range(SJL[s].nT).map(() => ({ D: 0, Y: 0, B: 0, wr: [0, 0, 0, 0] })));
+  let n = 0;
+  if (!key) return { cl, cd, tf, n, key };
+  for (const st of all) {
+    if (st.variant !== v) continue;
+    if (lang != null && st.lang !== lang) continue;
+    n++;
+    if (st.p1) for (let s = 0; s < NS; s++) for (let q = 0; q < SJL[s].nC; q++) {
+      const k = key.closed[s][q]; if (k < 0) continue;
+      const a = st.p1.closed[s][q], x = cl[s][q];
+      if (a === -1) x.B++;
+      else if (a === -2) { if (c.multi === 'wrong') x.Y++; else x.B++; }
+      else { x.cnt[a]++; if (a === k) x.D++; else x.Y++; }
+    }
+    if (st.p1 && st.p1.tf) for (let s = 0; s < NS; s++) for (let t = 0; t < SJL[s].nT; t++) {
+      const kt = key.tf && key.tf[s] ? key.tf[s][t] : null; if (!kt || kt.some(v => v < 0)) continue;
+      const a = st.p1.tf[s][t], x = tf[s][t], r = O.tfPoints(a, kt);
+      if (a.every(v => v === -1)) x.B++; else if (r.c === O.TFN) x.D++; else x.Y++;
+      a.forEach((v, j) => { if (v !== kt[j]) x.wr[j]++; });
+    }
+    if (st.p2) for (let s = 0; s < NS; s++) for (let t = 0; t < SJL[s].nK; t++) {
+      const kk = O.normCode(key.coded[s][t]); if (!kk) continue;
+      const ans = O.normCode(st.p2.cc[s][t].join('')), x = cd[s][t];
+      if (!ans) x.B++; else if (ans === kk) x.D++; else x.Y++;
+    }
+  }
+  return { cl, cd, tf, n, key };
+}
+function topWrongTf(x, num) {
+  let b = -1, bv = 0;
+  x.wr.forEach((n, j) => { if (n > bv) { bv = n; b = j; } });
+  return b >= 0 ? num + '.' + (b + 1) + ' (' + bv + ')' : '';
+}
+function topWrong(x, k) {
+  let b = -1, bv = 0;
+  x.cnt.forEach((n, o) => { if (o !== k && n > bv) { bv = n; b = o; } });
+  return b >= 0 ? LET[b] + ' (' + bv + ')' : '';
+}
+function itemAnalysis(all) {
+  const c = state.cfg;
+  const d = h('details', { class: 'card' }, h('summary', { style: { cursor: 'pointer', fontWeight: 600, fontSize: '16px' } }, 'Sual təhlili (hər sualı neçə nəfər düz cavablandırıb)'));
+  const vs = filledVariants().map(v => ({ v, st: itemStats(all, v), sl: flOn() ? [0, 1].map(l => itemStats(all, v, l)) : null })).filter(x => x.st.n > 0);
+  if (!vs.length) { d.append(h('p', { class: 'muted' }, 'Açar və nəticələr olduqda göstərilir.')); return d; }
+  for (const { v, st, sl } of vs) {
+    d.append(h('h3', {}, 'Variant ' + v + ' · ' + st.n + ' şagird'));
+    const grid = h('div', { class: 'cols3' });
+    const panels = [];
+    for (let s = 0; s < NS; s++) {
+      if (s === 0 && flOn()) [0, 1].forEach(l => panels.push({ s: 0, title: 'Xarici dil — ' + c.fl.n[l] + ' (' + sl[l].n + ' şagird)', ps: sl[l] }));
+      else panels.push({ s, title: c.subjects[s].name, ps: st });
+    }
+    for (const { s, title, ps } of panels) {
+      const { cl, cd, tf, key } = ps;
+      const S = c.subjects[s];
+      const tb = h('table', { class: 't' }, h('thead', {}, h('tr', {}, ['Sual', 'Düz', 'Yan.', 'Boş', '% düz', 'Ən çox səhv'].map(x => h('th', { class: 'n' }, x)))));
+      const body = h('tbody');
+      const row = (label, x, extra) => {
+        const tot = x.D + x.Y + x.B, pct = tot ? 100 * x.D / tot : null;
+        body.append(h('tr', {}, h('td', { class: 'n' }, label), h('td', { class: 'n' }, x.D), h('td', { class: 'n' }, x.Y), h('td', { class: 'n' }, x.B),
+          h('td', { class: 'n', style: { color: pct != null && pct < 30 ? '#c0332b' : '' } }, pct == null ? '—' : Math.round(pct) + '%'), h('td', { class: 'n' }, extra || '')));
+      };
+      const items = [];
+      if (ps.n) {
+        for (let q = 0; q < S.nC; q++) { if (key.closed[s][q] < 0) continue; items.push({ num: S.numC[q], label: S.numC[q], x: cl[s][q], extra: topWrong(cl[s][q], key.closed[s][q]) }); }
+        for (let t = 0; t < S.nT; t++) { const kt = key.tf && key.tf[s] ? key.tf[s][t] : null; if (!kt || kt.some(v => v < 0)) continue; items.push({ num: S.numT[t], label: S.numT[t] + ' (d/y)', x: tf[s][t], extra: topWrongTf(tf[s][t], S.numT[t]) }); }
+        for (let t = 0; t < S.nK; t++) if (O.normCode(key.coded[s][t])) items.push({ num: S.numK[t], label: S.numK[t], x: cd[s][t], extra: '' });
+      }
+      items.sort((p, q) => p.num - q.num).forEach(it => row(it.label, it.x, it.extra));
+      tb.append(body);
+      grid.append(h('div', {}, h('b', {}, title), h('div', { class: 'tblwrap', style: { maxHeight: '420px', marginTop: '4px' } }, tb)));
+    }
+    d.append(grid);
+  }
+  return d;
+}
+
+/* ---------- Excel ---------- */
+async function exportXlsx(all) {
+  const c = state.cfg, SJL = c.subjects;
+  if (!all.length) { toast('Hələ nəticə yoxdur'); return; }
+  const H = x => ({ v: x, s: 1 }), N = x => ({ v: x, s: 2 });
+  const xT = tTotal() > 0, xE = eTotal() > 0;
+  const xF = flOn(), flCell = r => r.lang === 0 || r.lang === 1 ? c.fl.n[r.lang] : '';
+  const head = [H('Nömrə'), H('Ad'), H('Variant')].concat(xF ? [H('Xarici dil')] : []);
+  c.subjects.forEach(s => ['Düz (qapalı)', 'Yanlış (qapalı)', 'Boş (qapalı)'].concat(xT ? ['Doğru/yanlış balı'] : [], ['Kod düz', 'Yazılı bal'], xE ? ['Esse balı'] : [], ['Fənn balı']).forEach(x => head.push(H(s.name + ' · ' + x))));
+  head.push(H('Cəmi bal'), H('Qeyd'));
+  const sorted = all.slice().sort((a, b) => a.id.localeCompare(b.id));
+  const rows = [head];
+  for (const r of sorted) {
+    const row = [r.id, r.name, r.variant || ''].concat(xF ? [flCell(r)] : []);
+    r.sc.subj.forEach((x, si) => {
+      const S = SJL[si];
+      row.push(r.p1 && S.nC ? x.D : '', r.p1 && S.nC ? x.Y : '', r.p1 && S.nC ? x.B : '');
+      if (xT) row.push(r.p1 && S.nT ? x.Tp : '');
+      row.push(r.p2 && S.nK ? x.K : '', r.hasW && S.nW ? O.r1(x.Wp * 100) / 100 : '');
+      if (xE) row.push(r.hasE && S.nE ? x.Ep : '');
+      row.push(r.sc.hasKey ? N(O.r1(x.weighted)) : '');
+    });
+    row.push(r.sc.hasKey ? N(O.r1(r.sc.total)) : '', r.issues.filter(i => !/^\d-ci səh\.: Zəif/.test(i.m)).map(i => i.m).concat(r.sc.subj.some(x => x.wMissing) ? ['Yazılı bal(lar) tam daxil edilməyib'] : [], r.sc.subj.some(x => x.eMissing) ? ['Esse balı daxil edilməyib'] : []).join('; '));
+    rows.push(row);
+  }
+  const perS = 6 + (xT ? 1 : 0) + (xE ? 1 : 0);
+  const widths = [10, 24, 8].concat(xF ? [14] : []); for (let i = 0; i < NS * perS; i++) widths.push(14); widths.push(12, 50);
+  const sheet1 = { name: 'Nəticələr', rows, widths, header: 1 };
+  // cavablar
+  const aRows = [[H('Nömrə'), H('Ad'), H('Variant')].concat(xF ? [H('Xarici dil')] : [])];
+  c.subjects.forEach(s => { aRows[0].push(H(s.name + ' · qapalı')); if (xT) aRows[0].push(H(s.name + ' · doğru/yanlış')); aRows[0].push(H(s.name + ' · kod'), H(s.name + ' · yazılı')); if (xE) aRows[0].push(H(s.name + ' · esse')); });
+  for (const r of sorted) {
+    const row = [r.id, r.name, r.variant || ''].concat(xF ? [flCell(r)] : []);
+    for (let s = 0; s < NS; s++) {
+      row.push(r.p1 ? r.p1.closed[s].map(a => a === -1 ? '-' : a === -2 ? '*' : LET[a]).join('') : '');
+      if (xT) row.push(r.p1 && r.p1.tf && SJL[s].nT ? r.p1.tf[s].map(b => b.map(a => a === -1 ? '-' : a === -2 ? '*' : a === 0 ? 'D' : 'Y').join('')).join(' ') : '');
+      row.push(r.p2 && SJL[s].nK ? r.p2.cc[s].map(x => x.join('') || '-').join(' | ') : '', r.hasW && SJL[s].nW ? r.written[s].map(w => w < 0 ? '-' : WLBL[w]).join(' ') : '');
+      if (xE) row.push(r.hasE && SJL[s].nE ? r.essay[s].map(e => e < 0 ? '-' : fmtE(e)).join(' ') : '');
+    }
+    aRows.push(row);
+  }
+  const perA = 3 + (xT ? 1 : 0) + (xE ? 1 : 0);
+  const sheet2 = { name: 'Cavablar', rows: aRows, widths: [10, 24, 8, ...(xF ? [14] : []), ...range(NS * perA).map(i => i % perA === 0 ? 28 : 22)], header: 1 };
+  // sual təhlili (variantlar üzrə)
+  const iRows = [[H('Variant'), H('Fənn'), H('Sual'), H('Düz'), H('Yanlış'), H('Boş'), H('% düz'), H('Ən çox seçilən səhv')]];
+  for (const v of filledVariants()) {
+    const st0 = itemStats(all, v); if (!st0.n) continue;
+    const sls = xF ? [0, 1].map(l => itemStats(all, v, l)) : null;
+    for (let s = 0; s < NS; s++) {
+      const S = SJL[s];
+      const runs = s === 0 && xF ? [0, 1].map(l => ({ st: sls[l], nm: 'Xarici dil — ' + c.fl.n[l] })) : [{ st: st0, nm: S.name }];
+      for (const { st, nm } of runs) {
+        if (!st.n) continue;
+        for (let q = 0; q < S.nC; q++) { const k = st.key.closed[s][q]; if (k < 0) continue; const x = st.cl[s][q], t = x.D + x.Y + x.B; iRows.push([v, nm, S.numC[q], x.D, x.Y, x.B, t ? N(O.r1(100 * x.D / t)) : '', topWrong(x, k)]); }
+        for (let k = 0; k < S.nK; k++) { if (!O.normCode(st.key.coded[s][k])) continue; const x = st.cd[s][k], t = x.D + x.Y + x.B; iRows.push([v, nm, S.numK[k], x.D, x.Y, x.B, t ? N(O.r1(100 * x.D / t)) : '', '']); }
+        for (let k = 0; k < S.nT; k++) { const kt = st.key.tf && st.key.tf[s] ? st.key.tf[s][k] : null; if (!kt || kt.some(z => z < 0)) continue; const x = st.tf[s][k], t = x.D + x.Y + x.B; iRows.push([v, nm, S.numT[k] + ' (doğru/yanlış, 4 bəndin hamısı düz)', x.D, x.Y, x.B, t ? N(O.r1(100 * x.D / t)) : '', topWrongTf(x, S.numT[k])]); }
+      }
+    }
+  }
+  const sheet3 = { name: 'Sual təhlili', rows: iRows, widths: [9, 24, 8, 8, 8, 8, 8, 20], header: 1 };
+  // açar
+  const kRows = [[H('Variant'), H('Fənn'), H('Qapalı açar'), H('Kodlaşdırılan açar')].concat(xT ? [H('Doğru/yanlış açarı')] : [])];
+  for (const v of VARS) if (keyFilled(v)) for (let s = 0; s < NS; s++) {
+    const ks = s === 0 && xF ? [{ nm: 'Xarici dil — ' + c.fl.n[0], K: c.keys[v] }, { nm: 'Xarici dil — ' + c.fl.n[1], K: c.keys[v].alt }] : [{ nm: SJL[s].name, K: c.keys[v] }];
+    for (const { nm, K } of ks) kRows.push([v, nm, O.closedKeyToStr(K.closed[s]), K.coded[s].map(x => x || '-').join(' | ')].concat(xT ? [K.tf[s].map(b => O.tfKeyToStr(b)).join(' ')] : []));
+  }
+  kRows.push([], [H('Quruluş'), structText(c)], [H('Düstur'), formulaText(c)]);
+  c.subjects.forEach(s => kRows.push([H('Əmsal'), s.name, N(s.coef)]));
+  if (xE) kRows.push([H('Esse maks. bal'), N(c.essayMax)]);
+  const sheet4 = { name: 'Açar və parametrlər', rows: kRows, widths: [10, 26, 34, 40, 30] };
+  const bytes = O.buildXlsx([sheet1, sheet2, sheet3, sheet4]);
+  const ok = await saveFile(safeName(c.name) + '-neticeler.xlsx', bytes, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  if (ok) toast('Excel faylı hazırdır');
+}
+
+/* ---------- başlanğıc ---------- */
+load();
+markDuplicates();
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+renderAll();
+})();
+
+</script>
+</body>
+</html>

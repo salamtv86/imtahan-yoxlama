@@ -143,6 +143,18 @@ select.lang { min-width: 110px; }
   table.qt td:nth-child(2){grid-column:1 / -1;order:3}
   table.qt td:nth-child(3){order:2;text-align:right}
 }
+/* sual üzrə bal düzəlişi: dar, oxsuz seçim; «—» = avtomatik */
+select.adj{-webkit-appearance:none;appearance:none;text-align:center;text-align-last:center;padding:0;height:23px;width:46px;margin-left:3px;font:500 11.5px inherit;color:#9aa3b2;background:#fff;border:1px solid #dfe3ea;border-radius:5px;cursor:pointer}
+select.adj:hover{border-color:#b8a9ea}
+select.adj.on{border-color:#7a5bd0;background:#f1ecfd;color:#3b2a86;font-weight:600}
+.ce tr.adjd th,.ce tr.adjd td.adjc{background:#f1ecfd}
+.ce caption.adjh{caption-side:top;text-align:right;font-size:10.5px;color:#7a5bd0;padding:0 5px 2px 0;white-space:nowrap}
+.cols3.adjgrid{grid-template-columns:repeat(auto-fit,minmax(226px,1fr))}
+.tfadj{float:right;font-weight:500;font-size:12px;color:var(--muted)}
+.tfadj select.adj{margin-left:3px}
+.cinp.adjrow select.adj{margin-left:0;width:100%;max-width:56px}
+.adjcap{font-size:11.5px;color:#7a5bd0;margin-top:6px}
+.adjmark{color:#5b3fc4;font-weight:600;cursor:help}
 
 </style>
 </head>
@@ -169,6 +181,7 @@ const MAXRAW = NC + NK + 2 * NW;            // 33 (blok)
 const MAXC = 28, MAXK = 5, MAXW = 15, MAXE = 5;   // bir fənn üçün vərəqə sığan ən çox qapalı / kodlaşdırılan / yazılı / esse tapşırıq
 const MAXROWS = 28;                          // qapalı cədvəlin sətir sayı (qapalı tapşırıq 1 sətir, doğru/yanlış tapşırığı 2 sətir tutur)
 const TFN = 4;                               // doğru/yanlış tapşırığında bənd sayı
+const TFL = 'abcd';                          // doğru/yanlış tapşırığının bəndlərinin işarəsi: 4.a, 4.b, 4.c, 4.d
 const WVALS = [0, 2, 3, 4, 6];              // yazılı tapşırığın balı altıda bir hissələrlə: 0, 1/3, 1/2, 2/3, 1 (düsturda 2 ilə vurulur)
 const LETTERS = 'ABCDEFGH';
 const SYM = ['-', ',', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
@@ -373,12 +386,14 @@ function writePage(cfg, pn, np, wp) {
   P.texts.push({ x: 24, y: 26, s: 4.2, b: 1, t: (cfg.name || 'İmtahan') + ' — cavab vərəqi (yazı hissəsi)', max: 135 });
   P.texts.push({ x: 186, y: 26, s: 3.4, b: 1, a: 'r', t: 'Səhifə ' + pn + '/' + np });
   P.texts.push({ x: 24, y: 31.2, s: 2.5, t: 'Açıq tapşırıqların cavabını nömrəsinə uyğun xanada qara və ya tünd göy qələmlə aydın yazın. Bu səhifədə dairə boyamayın.', max: 162 });
-  P.texts.push({ x: 24, y: 41, s: 2.8, t: 'Ad, soyad:' });
-  P.lines.push({ x1: 45, y1: 41.4, x2: 150, y2: 41.4, w: 0.25 });
+  P.texts.push({ x: 24, y: 41, s: 2.8, t: 'Soyadı, adı, ata adı:' });
+  P.lines.push({ x1: 62, y1: 41.4, x2: 150, y2: 41.4, w: 0.25 });
   P.texts.push({ x: 156, y: 41, s: 2.8, t: 'Variant:' });
   P.rects.push({ x: 171, y: 37.4, w: 7, h: 5.8, lw: 0.25 });
   P.texts.push({ x: 24, y: 51.4, s: 2.8, t: 'Şagird nömrəsi:' });
   for (let i = 0; i < IDD; i++) P.rects.push({ x: 55 + 7.4 * i, y: 46.6, w: 6.4, h: 6.6, lw: 0.25 });
+  P.texts.push({ x: 104, y: 51.4, s: 2.8, t: 'Qrup:' });
+  P.lines.push({ x1: 116, y1: 51.8, x2: 150, y2: 51.8, w: 0.25 });
   P.texts.push({ x: 100, y: 61, s: 2.4, t: 'Səhifə kodu' });
   P.cells = CELLS.map((c, i) => ({ x: c.x, y: c.y, s: c.s, on: CODE_W[i] }));
   P.texts.push({ x: 154, y: 61, s: 2.2, gray: 1, t: 'yazı səhifəsi, saytda oxunmur', max: 34 });
@@ -419,8 +434,18 @@ function header(P, pn, cfg, np) {
   }
   P.texts.push({ x: 100, y: 61, s: 2.4, t: 'Səhifə kodu' });
   P.cells = CELLS.map((c, i) => ({ x: c.x, y: c.y, s: c.s, on: CODE[pn][i] }));
-  P.texts.push({ x: 100, y: 71, s: 2.8, t: 'Ad, soyad:' });
-  P.lines.push({ x1: 121, y1: 71.4, x2: 186, y2: 71.4, w: 0.25 });
+  nameBox(P);
+}
+/* Əllə yazı xanaları (saytda oxunmur): soyad, ad, ata adı, qrup. 2×2 cədvəl yalnız boş yerdə durur: oxunan dairələrə, səhifə kodu xanalarına
+   və kənar işarələrə toxunmur, ona görə də xanalar əlavə olunmazdan əvvəl çap edilmiş vərəqlər də eyni cür oxunur. */
+const NB = { x: 100, y: 63.5, w: 90, h: 12, mid: 145 };
+function nameBox(P) {
+  const { x, y, w, h, mid } = NB, ym = y + h / 2;
+  P.rects.push({ x, y, w, h, lw: 0.3 });
+  P.lines.push({ x1: x, y1: ym, x2: x + w, y2: ym, w: 0.25 }, { x1: mid, y1: y, x2: mid, y2: y + h, w: 0.25 });
+  const lab = (t, lx, ly) => P.texts.push({ x: lx, y: ly, s: 2.4, gray: 1, t, max: 12 });
+  lab('Soyadı:', x + 1.3, y + 4.2); lab('Adı:', mid + 1.3, y + 4.2);
+  lab('Ata adı:', x + 1.3, ym + 4.2); lab('Qrup:', mid + 1.3, ym + 4.2);
 }
 
 /* yoxlayıcı xanaları (yazılı bal) yalnız qapalı ≤ 22 və hər fənndə yazılı ≤ 3 olduqda vərəqdə çıxır; əks halda ballar saytda daxil edilir */
@@ -469,7 +494,7 @@ function page1(P, cfg) {
         r += 1;
       } else {
         for (let j = 0; j < TFN; j++) {
-          const y = 92 + 6.6 * (r + (j >> 1)), side = j & 1, lab = S.numT[L.i] + '.' + (j + 1);
+          const y = 92 + 6.6 * (r + (j >> 1)), side = j & 1, lab = S.numT[L.i] + '.' + TFL[j];
           if (side === 0) P.texts.push({ x: x0 + 6.2, y: y + 1, s: 2.4, a: 'r', t: lab });
           else P.texts.push({ x: x0 + 28, y: y + 1, s: 2.4, a: 'c', t: lab });
           const bx = side === 0 ? [x0 + 12, x0 + 20] : [x0 + 36, x0 + 44];
@@ -1137,7 +1162,7 @@ function readSheet(img, cfg, opts) {
       else if (d.weak || (d.sel.length === 1 && d.mx < T_MARK + 0.06)) weak.push((g.a + 1) + '/' + SJ[g.a].numC[g.b]);
     } else if (g.t === 'tf') {
       tf[g.a][g.b][g.c] = d.sel.length === 0 ? -1 : d.sel.length === 1 ? d.sel[0] : -2;
-      const lab = (g.a + 1) + '/' + SJ[g.a].numT[g.b] + '.' + (g.c + 1);
+      const lab = (g.a + 1) + '/' + SJ[g.a].numT[g.b] + '.' + TFL[g.c];
       if (d.sel.length > 1) multiC.push(lab);
       else if (d.weak || (d.sel.length === 1 && d.mx < T_MARK + 0.06)) weak.push(lab);
     } else if (g.t === 'wr') {
@@ -1265,6 +1290,10 @@ function tfPoints(ans, key) {
   return { c, pts: c === TFN ? 1 : c === TFN - 1 ? 0.5 : 0 };
 }
 
+/* Sual üzrə bal düzəlişi: qapalı (c) və kodlaşdırılan (k) sual üçün 0 və ya 1, doğru/yanlış tapşırığı (t) üçün 0, 0,5 və ya 1.
+   st.adj[fənn] = { c: {sual: bal}, t: {tapşırıq: bal}, k: {tapşırıq: bal} } — yazılmayan sual avtomatik hesablanır. */
+const ADJ_VALS = { c: [0, 1], k: [0, 1], t: [0, 0.5, 1] };
+const adjOk = (kind, v) => typeof v === 'number' && ADJ_VALS[kind].indexOf(v) >= 0;
 const at = (a, i, d) => (a && a[i] != null ? a[i] : d);
 function scoreStudent(st, cfg) {
   cfg = normalizeCfg(cfg);
@@ -1274,8 +1303,11 @@ function scoreStudent(st, cfg) {
   for (let s = 0; s < NS; s++) {
     const S = cfg.subjects[s];
     const noLang = s === 0 && !langOk;
-    let D = 0, Y = 0, B = 0, K = 0, Wu = 0, Tp = 0, Eh = 0, noKey = 0, wMissing = 0, eMissing = 0;
+    let D = 0, Y = 0, B = 0, K = 0, Wu = 0, Tp = 0, Eh = 0, noKey = 0, wMissing = 0, eMissing = 0, adjN = 0;
+    const aj = st.adj && st.adj[s] ? st.adj[s] : null;      // müəllimin sual üzrə əllə verdiyi bal: avtomatik nəticənin əvəzinə keçir
     for (let q = 0; q < S.nC; q++) {
+      const o = aj && aj.c ? aj.c[q] : undefined;
+      if (adjOk('c', o)) { adjN++; if (o === 1) D++; else B++; continue; }   // 1 = düz sayılır, 0 = bal yoxdur (nə bal, nə cərimə)
       const a = st.closed ? at(st.closed[s], q, -1) : -1;
       const k = key && !noLang ? at(key.closed[s], q, -1) : -1;
       if (k < 0) { noKey++; continue; }
@@ -1284,6 +1316,8 @@ function scoreStudent(st, cfg) {
       else if (a === k) D++; else Y++;
     }
     for (let t = 0; t < S.nT; t++) {
+      const o = aj && aj.t ? aj.t[t] : undefined;
+      if (adjOk('t', o)) { adjN++; Tp += o; continue; }
       const kt = key && !noLang && key.tf && key.tf[s] ? key.tf[s][t] : null;
       const at_ = st.tf && st.tf[s] ? st.tf[s][t] : null;
       const r = tfPoints(at_, kt);
@@ -1291,6 +1325,8 @@ function scoreStudent(st, cfg) {
       Tp += r.pts;
     }
     for (let t = 0; t < S.nK; t++) {
+      const o = aj && aj.k ? aj.k[t] : undefined;
+      if (adjOk('k', o)) { adjN++; K += o; continue; }
       const ans = normCode(st.coded ? at(st.coded[s], t, '') : ''), kk = normCode(key && !noLang ? at(key.coded[s], t, '') : '');
       if (kk !== '' && ans === kk) K++;
     }
@@ -1312,9 +1348,9 @@ function scoreStudent(st, cfg) {
     const weighted = s100 * S.coef;
     total += weighted;
     if (wMissing || eMissing || noLang) incomplete = true;
-    subj.push({ D, Y, B, K, Wp, Tp, Ep, noKey, wMissing, eMissing, noLang, raw, s100, weighted, maxRaw });
+    subj.push({ D, Y, B, K, Wp, Tp, Ep, noKey, wMissing, eMissing, noLang, raw, s100, weighted, maxRaw, adjN });
   }
-  return { subj, total, incomplete, hasKey: !!key, langMissing: !langOk };
+  return { subj, total, incomplete, hasKey: !!key, langMissing: !langOk, adjN: subj.reduce((a, x) => a + x.adjN, 0) };
 }
 const r1 = x => { const v = Math.round(x * 10 + 1e-7) / 10; return v === 0 ? 0 : v; };
 
@@ -1413,7 +1449,7 @@ function buildPdf(imgs) {
 }
 
 G.OMR = {
-  PW, PH, NS, NC, NK, NW, IDD, CCOLS, NSYM, MAXRAW, MAXC, MAXK, MAXW, MAXE, MAXROWS, TFN, WVALS, PRESETS, LETTERS, SYM, SYMLBL, CORN, ANCHORS, T_MARK, T_WEAK,
+  PW, PH, NS, NC, NK, NW, IDD, CCOLS, NSYM, MAXRAW, MAXC, MAXK, MAXW, MAXE, MAXROWS, TFN, TFL, NB, ADJ_VALS, adjOk, WVALS, PRESETS, LETTERS, SYM, SYMLBL, CORN, ANCHORS, T_MARK, T_WEAK,
   FLN, FLT, FLX, WBN, WB, CODE_W, defaultCfg, normalizeCfg, emptyKey, fitKey, effKey, sigOf, pageCount, totalPages, writePlan, writePageCount, writeItems, parsePat, teacherBlock, scoreBlock2, WSLBL, buildPages, renderPage, readSheet, locate, rectify, loadGray,
   measureDbg, debugComps, normCode, parseClosedKey, closedKeyToStr, parseTfKey, tfKeyToStr, tfPoints, scoreStudent, r1,
   buildXlsx, buildPdf, zipStore, crc32, range
@@ -1522,7 +1558,7 @@ async function saveFile(name, data, mime) {
 
 /* ---------- vəziyyət ---------- */
 const state = {
-  cfg: O.normalizeCfg({}), scans: [], manual: {}, essay: {}, tab: 'setup', keyVariant: 'A', keyMsg: null, keyPending: null,
+  cfg: O.normalizeCfg({}), scans: [], manual: {}, essay: {}, adj: {}, tab: 'setup', keyVariant: 'A', keyMsg: null, keyPending: null,
   chk: { problemOnly: false },
   res: { q: '', sort: 'id', dir: 1 }
 };
@@ -1541,7 +1577,7 @@ let uidN = Date.now();
 let savePending = false;
 function saveNow() {
   savePending = false;
-  try { localStorage.setItem(LS_KEY, JSON.stringify({ cfg: state.cfg, scans: state.scans, manual: state.manual, manualV: 2, essay: state.essay, keyVariant: state.keyVariant })); } catch (e) { }
+  try { localStorage.setItem(LS_KEY, JSON.stringify({ cfg: state.cfg, scans: state.scans, manual: state.manual, manualV: 2, essay: state.essay, adj: state.adj, keyVariant: state.keyVariant })); } catch (e) { }
 }
 const saveLater = debounce(saveNow, 400);
 function save() { savePending = true; saveLater(); }
@@ -1552,7 +1588,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 function load() {
   try {
     const j = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
-    if (j) { state.cfg = O.normalizeCfg(j.cfg); fitAllKeys(); state.scans = Array.isArray(j.scans) ? j.scans : []; normScans(); state.manual = cleanManual(j.manual, j.manualV); state.essay = cleanEssay(j.essay); state.keyVariant = j.keyVariant || 'A'; }
+    if (j) { state.cfg = O.normalizeCfg(j.cfg); fitAllKeys(); state.scans = Array.isArray(j.scans) ? j.scans : []; normScans(); state.manual = cleanManual(j.manual, j.manualV); state.essay = cleanEssay(j.essay); state.adj = cleanAdj(j.adj); state.keyVariant = j.keyVariant || 'A'; }
   } catch (e) { }
 }
 function ensureKey(v) { if (!state.cfg.keys[v]) state.cfg.keys[v] = O.emptyKey(state.cfg); return state.cfg.keys[v]; }
@@ -1613,6 +1649,47 @@ function effWritten(id, p1, p2) {
     if (x2 >= 0 && x2 < O.WVALS.length) return O.WVALS[x2];
     const x = p1 && p1.written && p1.written[a] ? p1.written[a][b] : -1; return x >= 0 ? 3 * x : -1;
   }));
+}
+/* Sual üzrə əllə bal düzəlişi (müəllim verir): avtomatik nəticənin əvəzinə keçir.
+   state.adj[5 rəqəmli nömrə] = fənn üzrə { c: {qapalı sual: 0|1}, t: {doğru/yanlış tapşırığı: 0|0,5|1}, k: {kodlaşdırılan: 0|1} }; yazılmayan sual avtomatik hesablanır. */
+const ADJK = ['c', 't', 'k'], ADJN = { c: 'nC', t: 'nT', k: 'nK' };
+function cleanAdj(m) {
+  const out = {};
+  if (!m || typeof m !== 'object') return out;
+  const sj = state.cfg.subjects;
+  for (const key of Object.keys(m)) {
+    const id = canonId(key), v = m[key];
+    if (!id || !Array.isArray(v)) continue;
+    const rec = range(NS).map(a => {
+      const o = { c: {}, t: {}, k: {} };
+      for (const kind of ADJK) {
+        const src = v[a] && v[a][kind];
+        if (!src || typeof src !== 'object') continue;
+        for (const i of Object.keys(src)) { const n = Number(i), x = src[i]; if (Number.isInteger(n) && n >= 0 && n < sj[a][ADJN[kind]] && O.adjOk(kind, x)) o[kind][n] = x; }
+      }
+      return o;
+    });
+    if (adjCount(rec)) out[id] = rec;
+  }
+  return out;
+}
+const adjCount = rec => rec ? rec.reduce((a, o) => a + ADJK.reduce((b, k) => b + Object.keys(o[k]).length, 0), 0) : 0;
+function getAdj(id, s, kind, i) { const r = id ? state.adj[id] : null; const v = r && r[s] && r[s][kind] ? r[s][kind][i] : undefined; return O.adjOk(kind, v) ? v : null; }
+function setAdj(id, s, kind, i, v) {
+  const rec = state.adj[id] || (state.adj[id] = range(NS).map(() => ({ c: {}, t: {}, k: {} })));
+  if (v == null) delete rec[s][kind][i]; else rec[s][kind][i] = v;
+  if (!adjCount(rec)) delete state.adj[id];
+  save();
+}
+/* düzəlişlərin mətn siyahısı (Excel qeydi üçün): «1/17 = 1 bal» (fənn/sual) */
+function adjSummary(id) {
+  const rec = id ? state.adj[id] : null; if (!rec) return '';
+  const out = [], SJL = state.cfg.subjects;
+  for (let s = 0; s < NS; s++) for (const kind of ADJK) {
+    const nums = kind === 'c' ? SJL[s].numC : kind === 't' ? SJL[s].numT : SJL[s].numK;
+    Object.keys(rec[s][kind]).map(Number).sort((a, b) => a - b).forEach(i => out.push({ n: nums[i], t: (s + 1) + '/' + nums[i] + ' = ' + fmtW(rec[s][kind][i]) + ' bal' }));
+  }
+  return out.map(x => x.t).join(', ');
 }
 /* Esse balını müəllim verir (0-dan essayMax-a qədər, yarım ballarla). state.essay[5 rəqəmli nömrə] = fənn × esse balları, yarım ballarla (2·bal), -1: daxil edilməyib. */
 function cleanEssay(m) {
@@ -1691,7 +1768,7 @@ function buildStudents() {
     }
     const written = effWritten(canonId(st.id), st.p1, st.p2), hasW = written.some(r => r.some(x => x >= 0));
     const essay = effEssay(canonId(st.id), st.p2), hasE = hasAny(essay);
-    const data = { variant, lang, closed: st.p1 ? st.p1.closed : null, tf: st.p1 ? st.p1.tf : null, written, coded: st.p2 ? codedStrs(st.p2) : null, essay };
+    const data = { variant, lang, closed: st.p1 ? st.p1.closed : null, tf: st.p1 ? st.p1.tf : null, written, coded: st.p2 ? codedStrs(st.p2) : null, essay, adj: state.adj[canonId(st.id)] || null };
     const sc = O.scoreStudent(data, state.cfg);
     out.push({ id: st.id, name: rosterName(st.id), variant, lang, p1: st.p1, p2: st.p2, sc, issues, data, written, hasW, essay, hasE,
       hasErr: issues.some(i => i.lv === 'e'), hasWarn: issues.some(i => i.lv === 'w') });
@@ -1768,7 +1845,7 @@ function structText(c) {
 }
 function fitAllKeys() { const c = state.cfg; for (const v of Object.keys(c.keys)) c.keys[v] = O.fitKey(c.keys[v], c); }
 function clearScanData() {
-  state.scans = []; state.manual = {}; state.essay = {};
+  state.scans = []; state.manual = {}; state.essay = {}; state.adj = {};
   for (const u of thumbs.values()) { try { URL.revokeObjectURL(u); } catch (e) { } }
   thumbs.clear(); IDB.clear();
 }
@@ -1778,9 +1855,9 @@ async function changeStructure(mut) {
   const next = JSON.parse(JSON.stringify(state.cfg));
   mut(next);
   const n2 = O.normalizeCfg(next);
-  const hasData = state.scans.length > 0 || Object.keys(state.manual).length > 0 || Object.keys(state.essay).length > 0;
+  const hasData = state.scans.length > 0 || Object.keys(state.manual).length > 0 || Object.keys(state.essay).length > 0 || Object.keys(state.adj).length > 0;
   if (O.sigOf(n2) !== before && hasData) {
-    if (!(await askConfirm('İmtahan quruluşu dəyişəndə oxunmuş vərəqlər və əl ilə daxil edilmiş yazılı və esse ballar silinəcək (onlar köhnə quruluşa uyğundur). Əvvəlcə Excel və .json ehtiyatını yüklədiyinizdən əmin olun.', 'Bəli, quruluşu dəyiş'))) { renderAll(); return false; }
+    if (!(await askConfirm('İmtahan quruluşu dəyişəndə oxunmuş vərəqlər, əl ilə daxil edilmiş yazılı və esse ballar və sual üzrə bal düzəlişləri silinəcək (onlar köhnə quruluşa uyğundur). Əvvəlcə Excel və .json ehtiyatını yüklədiyinizdən əmin olun.', 'Bəli, quruluşu dəyiş'))) { renderAll(); return false; }
     clearScanData();
   }
   state.cfg = n2; fitAllKeys();
@@ -1946,7 +2023,7 @@ function viewSetup() {
       h('div', { class: 'nm' }, title),
       h('div', {},
         S.nC ? [h('label', { class: 'f' }, 'Qapalı cavablar (' + S.nC + ' hərf, boşluqsuz)'), inp, st] : null,
-        S.nT ? [h('label', { class: 'f', style: { marginTop: '10px' } }, 'Doğru/yanlış tapşırıqları: hər tapşırıq üçün 4 hərf, bəndlərin sırası ilə (D = doğru, Y = yanlış, məs.: DYYD)'), tfKeys, tfSt] : null,
+        S.nT ? [h('label', { class: 'f', style: { marginTop: '10px' } }, 'Doğru/yanlış tapşırıqları: hər tapşırıq üçün 4 hərf, a, b, c, d bəndlərinin sırası ilə (D = doğru, Y = yanlış, məs.: DYYD)'), tfKeys, tfSt] : null,
         S.nK ? [h('label', { class: 'f', style: { marginTop: '10px' } }, 'Kodlaşdırılan cavablar (rəqəm, mənfi və ya vergüllü: 12, -3, 2,5)'), coded] : null,
         !S.nC && !S.nK && !S.nT ? h('div', { class: 'small muted' }, 'Bu fənndə qapalı və ya kodlaşdırılan tapşırıq yoxdur (yalnız yazılı).') : null)));
   }
@@ -1958,9 +2035,9 @@ function viewSetup() {
     h('button', { class: 'btn danger sm', onclick: async () => { if (await askConfirm(v + ' variantının açarı silinsin?')) { delete c.keys[v]; save(); renderAll(); } } }, v + ' açarını sil'), keyFile),
     h('p', { class: 'small muted', style: { margin: '6px 0 0' } }, 'Müəllim bir cavab vərəqini düzgün cavablarla doldurur, hər səhifəsinin şəklini çəkib bura yükləyir. Oxunanları yuxarıda yoxlayın və lazım olsa düzəldin.'),
     keyMsg,
-    state.keyPending && flOn() ? h('div', { class: 'row keypend', style: { marginTop: '8px' } },
+    ...(state.keyPending && flOn() ? [h('div', { class: 'row keypend', style: { marginTop: '8px' } },
       h('span', { class: 'small' }, 'Bu cavablar hansı dilin açarıdır?'),
-      state.cfg.fl.n.map((nm, i) => h('button', { class: 'btn sm', 'data-lang': i, onclick: () => applyKeyPending(i) }, nm))) : null);
+      state.cfg.fl.n.map((nm, i) => h('button', { class: 'btn sm', 'data-lang': i, onclick: () => applyKeyPending(i) }, nm)))] : []));
   root.append(keyCard);
 
   // siyahı
@@ -1979,15 +2056,15 @@ function viewSetup() {
       const ncfg = O.normalizeCfg(j.cfg || j);
       const same = O.sigOf(ncfg) === O.sigOf(state.cfg);
       state.cfg = ncfg; fitAllKeys();
-      if (j.scans) { state.scans = j.scans; normScans(); state.manual = cleanManual(j.manual, j.manualV); state.essay = cleanEssay(j.essay); markDuplicates(); }
-      else if (!same) { state.scans = []; state.manual = {}; state.essay = {}; }
+      if (j.scans) { state.scans = j.scans; normScans(); state.manual = cleanManual(j.manual, j.manualV); state.essay = cleanEssay(j.essay); state.adj = cleanAdj(j.adj); markDuplicates(); }
+      else if (!same) { state.scans = []; state.manual = {}; state.essay = {}; state.adj = {}; }
       save(); renderAll(); toast('Quraşdırma yükləndi');
     } catch (err) { toast('Fayl oxunmadı'); }
   } });
   root.append(h('div', { class: 'card' }, h('h2', {}, 'Saxla / yüklə'),
     h('p', { class: 'sub' }, 'Quraşdırma və nəticələr bu cihazın brauzerində avtomatik saxlanır, amma brauzer yaddaşı təmizlənərsə və ya başqa cihaza keçsəniz itə bilər. İmtahan bitəndən sonra Excel faylını və bu .json ehtiyat faylını mütləq yükləyin.'),
     h('div', { class: 'row' },
-      h('button', { class: 'btn', onclick: () => saveFile(safeName(c.name) + '-layihe.json', JSON.stringify({ cfg: state.cfg, scans: state.scans, manual: state.manual, manualV: 2, essay: state.essay }), 'application/json') }, 'Hamısını fayla yaz (.json)'),
+      h('button', { class: 'btn', onclick: () => saveFile(safeName(c.name) + '-layihe.json', JSON.stringify({ cfg: state.cfg, scans: state.scans, manual: state.manual, manualV: 2, essay: state.essay, adj: state.adj }), 'application/json') }, 'Hamısını fayla yaz (.json)'),
       h('button', { class: 'btn', onclick: () => cfgFile.click() }, 'Fayldan yüklə'), cfgFile),
     h('div', { class: 'row', style: { marginTop: '14px' } },
       h('button', { class: 'btn danger', onclick: async () => {
@@ -2112,11 +2189,12 @@ function viewSheet() {
       h('li', {}, 'A4 kağızda, «Faktiki ölçü / 100%» seçimi ilə çap edin. Vərəqdəki 4 künc və kənar qara kvadratlar tam çıxmalıdır, kəsilməməlidir.'),
       h('li', {}, 'Mümkünsə qara-ağ lazer printer və ya surətçıxaran istifadə edin, çap aydın olsun.'),
       h('li', {}, 'Şagirdlər dairələri qara qələm və ya yumşaq karandaşla tam boyamalıdır. Düzəliş üçün yaxşı silgi lazımdır.'),
+      h('li', {}, 'Vərəqin başındakı cədvələ şagird soyadını, adını, ata adını və qrupunu əlində yazır. Bu xanalar saytda oxunmur, müəllim üçündür; nömrə dairələri isə mütləq boyanmalıdır.'),
       h('li', {}, 'Şagirdlər öz nömrəsini və variantı (varsa)' + (flOn() ? ', həmçinin xarici dili' : '') + ' da dairələri boyamaqla göstərir.'),
       nw ? h('li', {}, 'Yazı səhifələrində (' + wbRange() + ') şagird cavabı nömrəsinə uyğun xanada qara və ya tünd göy qələmlə yazır, dairə boyamır. Bu səhifələr saytda oxunmur: müəllim kağızdan yoxlayıb balı verir. Şəkil çəkərkən yalnız oxunan səhifələri (' + (nO === 2 ? '1-ci və 2-ci' : '1-ci') + ') çəkin; yazı səhifəsini səhvən yükləsəniz, sayt onu tanıyıb keçəcək.') : null,
       np > 1 ? h('li', {}, 'İki üzlü çap seçsəniz (uzun kənardan çevirmə), 1-ci və 2-ci səhifələr bir vərəqin iki üzündə çıxır' + (nw ? ', yazı səhifələri isə sonrakı vərəqlərdə' : '') + '.') : null,
       sbInfo() ? h('li', {}, 'Yoxlayıcı açıq tapşırığın balını 2-ci səhifənin altındakı dairələrdə qara qələmlə boyayır, sonra vərəqin şəkli çəkilir. Yazılı tapşırıqda dairələr: 0, ⅓, ½, ⅔ və 1 (tam bal)' + (sbInfo().e ? '; esse üçün 0-dan ' + String(c.essayMax).replace('.', ',') + '-ə qədər, yarım ballarla' : '') + '.') : null,
-      tTotal() ? h('li', {}, 'Doğru/yanlış tapşırıqlarının hər bəndində iki dairə var: sol dairə «doğru», sağ dairə «yanlış». Hər bənddə yalnız birini boyayın.') : null)));
+      tTotal() ? h('li', {}, 'Doğru/yanlış tapşırıqlarının hər bəndində (a, b, c, d) iki dairə var: sol dairə «doğru», sağ dairə «yanlış». Hər bənddə yalnız birini boyayın.') : null)));
   root.append(h('div', { class: 'card' }, h('h2', {}, 'Önbaxış'), prev));
   return root;
 }
@@ -2300,6 +2378,19 @@ function openEditor(uid) {
   if ((sc.flags || []).length) form.append(h('div', { class: 'note warn small' }, sc.flags.map(f => h('div', {}, '• ' + f.m))));
   const paints = [];
   function paintAll() { paints.forEach(f => f()); }
+  /* sual üzrə əllə bal düzəlişi: «—» avtomatik hesablama deməkdir, seçilən bal həmin sual üçün avtomatik nəticənin əvəzinə keçir */
+  function mkAdj(kind, s, i) {
+    const el = h('select', { class: 'adj', 'data-adj': kind + s + '-' + i, title: 'Bal düzəlişi: bu sual üçün avtomatik nəticənin əvəzinə seçdiyiniz bal verilir. «—» = avtomatik hesablama.',
+      onchange: e => {
+        const id = canonId(sc.id);
+        if (!id) { toast('Əvvəlcə şagird nömrəsini (5 rəqəm) düzgün yazın'); paintAll(); return; }
+        setAdj(id, s, kind, i, e.target.value === '' ? null : Number(e.target.value)); touch();
+      } },
+      h('option', { value: '' }, '—'), O.ADJ_VALS[kind].map(v => h('option', { value: String(v) }, fmtW(v) + ' bal')));
+    const cur = () => getAdj(canonId(sc.id), s, kind, i);
+    paints.push(() => { const v = cur(); el.value = v == null ? '' : String(v); el.className = 'adj' + (v == null ? '' : ' on'); });
+    return { el, cur };
+  }
   function appendScoreCards() {
     if (wTotal() > 0) {
       const wr = h('div', { class: 'cols3' });
@@ -2336,10 +2427,11 @@ function openEditor(uid) {
     }
   }
   if (sc.page === 1) {
-    const cols = h('div', { class: 'cols3' });
+    const cols = h('div', { class: 'cols3 adjgrid' });
     for (let s = 0; s < NS; s++) {
       const S = c.subjects[s];
       const tb = h('table', { class: 'ce' });
+      if (S.rows) tb.append(h('caption', { class: 'adjh', title: 'Bal düzəlişi: avtomatik hesabın əvəzinə əllə bal' }, 'düzəliş'));
       const btns = [], tfBlocks = [];
       for (const L of S.lay) {
         if (L.k === 'C') {
@@ -2349,30 +2441,32 @@ function openEditor(uid) {
             const b = h('button', { class: 'opt', type: 'button', onclick: () => { sc.closed[s][q] = sc.closed[s][q] === o ? -1 : o; touch(); } }, LET[o]);
             row.push(b); tr.append(h('td', {}, b));
           }
-          btns[q] = { tr, row }; tb.append(tr);
+          const adj = mkAdj('c', s, q);
+          tr.append(h('td', { class: 'adjc' }, adj.el));
+          btns[q] = { tr, row, adj }; tb.append(tr);
         } else {
-          const t = L.i, info = h('span', { class: 'tfinfo' });
-          tb.append(h('tr', {}, h('th', { colspan: nOpt + 1, class: 'tfh' }, S.numT[t] + ' · doğru/yanlış ', info)));
+          const t = L.i, info = h('span', { class: 'tfinfo' }), adjT = mkAdj('t', s, t);
+          tb.append(h('tr', {}, h('th', { colspan: nOpt + 2, class: 'tfh' }, S.numT[t] + ' · doğru/yanlış ', info, h('span', { class: 'tfadj' }, 'düzəliş ', adjT.el))));
           const rowsT = [];
           for (let j = 0; j < O.TFN; j++) {
-            const tr = h('tr', {}, h('th', {}, S.numT[t] + '.' + (j + 1))); const row = [];
+            const tr = h('tr', {}, h('th', {}, S.numT[t] + '.' + O.TFL[j])); const row = [];
             [['D', 0, 'doğru'], ['Y', 1, 'yanlış']].forEach(([lb, o, tt]) => {
               const b = h('button', { class: 'opt', type: 'button', title: tt, onclick: () => { sc.tf[s][t][j] = sc.tf[s][t][j] === o ? -1 : o; touch(); } }, lb);
               row.push(b); tr.append(h('td', {}, b));
             });
             rowsT.push({ tr, row }); tb.append(tr);
           }
-          tfBlocks.push({ t, info, rowsT });
+          tfBlocks.push({ t, info, rowsT, adj: adjT });
         }
       }
       paints.push(() => {
         const key = effKeyOf(sc);
         for (let q = 0; q < S.nC; q++) {
-          const a = sc.closed[s][q], k = key ? key.closed[s][q] : -1, { tr, row } = btns[q];
-          tr.className = a === -2 ? 'multi' : '';
+          const a = sc.closed[s][q], k = key ? key.closed[s][q] : -1, { tr, row, adj } = btns[q];
+          tr.className = (a === -2 ? 'multi' : '') + (adj.cur() != null ? ' adjd' : '');
           row.forEach((b, o) => { b.className = 'opt' + (a === o ? ' on' + (k < 0 ? '' : a === k ? ' ok' : ' bad') : '') + (k === o && a !== o ? ' key' : ''); });
         }
-        for (const { t, info, rowsT } of tfBlocks) {
+        for (const { t, info, rowsT, adj } of tfBlocks) {
           const kt = key && key.tf && key.tf[s] ? key.tf[s][t] : null;
           rowsT.forEach(({ tr, row }, j) => {
             const a = sc.tf[s][t][j], k = kt ? kt[j] : -1;
@@ -2380,14 +2474,15 @@ function openEditor(uid) {
             row.forEach((b, o) => { b.className = 'opt' + (a === o ? ' on' + (k < 0 ? '' : a === k ? ' ok' : ' bad') : '') + (k === o && a !== o ? ' key' : ''); });
           });
           const r = O.tfPoints(sc.tf[s][t], kt);
-          info.textContent = r ? '· ' + r.c + '/' + O.TFN + ' düz → ' + String(r.pts).replace('.', ',') + ' bal' : '';
+          const av = adj.cur();
+          info.textContent = (r ? '· ' + r.c + '/' + O.TFN + ' düz → ' + String(r.pts).replace('.', ',') + ' bal' : '') + (av != null ? ' · düzəliş: ' + fmtW(av) + ' bal' : '');
         }
       });
       const nameEl = h('b', {}, S.name);
       if (s === 0 && flOn()) paints.push(() => { nameEl.textContent = S.name + ' — ' + (sc.lang === 0 || sc.lang === 1 ? c.fl.n[sc.lang] : 'dil seçilməyib'); });
       cols.append(h('div', {}, nameEl, S.rows ? tb : h('div', { class: 'small muted' }, 'Qapalı tapşırıq yoxdur')));
     }
-    form.append(h('div', { class: 'card' }, h('h3', { style: { marginTop: 0 } }, tTotal() ? 'Qapalı və doğru/yanlış cavablar' : 'Qapalı cavablar'), h('p', { class: 'small muted', style: { margin: '0 0 8px' } }, 'Yaşıl: düz, qırmızı: səhv, yaşıl haşiyə: düzgün cavab (şagird fərqli işarələyibsə). Sarı sətir: 2+ işarə. Düyməyə basaraq cavabı düzəldin; eyni düyməyə təkrar basmaq cavabı boş edir.' + (tTotal() ? ' Doğru/yanlış bəndlərində D = doğru, Y = yanlış.' : '')), cols));
+    form.append(h('div', { class: 'card' }, h('h3', { style: { marginTop: 0 } }, tTotal() ? 'Qapalı və doğru/yanlış cavablar' : 'Qapalı cavablar'), h('p', { class: 'small muted', style: { margin: '0 0 8px' } }, 'Yaşıl: düz, qırmızı: səhv, yaşıl haşiyə: düzgün cavab (şagird fərqli işarələyibsə). Sarı sətir: 2+ işarə. Düyməyə basaraq cavabı düzəldin; eyni düyməyə təkrar basmaq cavabı boş edir.' + (tTotal() ? ' Doğru/yanlış bəndləri a, b, c, d ilə işarələnir: D = doğru, Y = yanlış.' : '') + ' Sualın yanındakı «düzəliş» seçimi həmin suala əllə bal verir və avtomatik nəticənin əvəzinə keçir («—» = avtomatik).'), cols));
     appendScoreCards();
   } else {
     const cols = h('div', { class: 'stack' });
@@ -2403,6 +2498,7 @@ function openEditor(uid) {
         return h('div', {}, h('label', { class: 'f' }, S.numK[t] + '-ci'), i);
       });
       const marks = range(S.nK).map(t => h('span', { class: 'small' }));
+      const adjs = range(S.nK).map(t => mkAdj('k', s, t));
       paints.push(() => {
         const k = key();
         marks.forEach((m, t) => {
@@ -2410,9 +2506,9 @@ function openEditor(uid) {
           m.textContent = !kk ? '' : (ans === kk ? '✓' : (ans ? '✗ ' + kk : '— ' + kk)); m.style.color = ans === kk && kk ? '#17803f' : '#c0332b';
         });
       });
-      cols.append(h('div', {}, h('b', {}, S.name), h('div', { class: 'cinp', style: { marginTop: '4px' } }, inps), h('div', { class: 'cinp', style: { marginTop: '2px' } }, marks.map(m => h('div', {}, m)))));
+      cols.append(h('div', {}, h('b', {}, S.name), h('div', { class: 'cinp', style: { marginTop: '4px' } }, inps), h('div', { class: 'cinp', style: { marginTop: '2px' } }, marks.map(m => h('div', {}, m))), h('div', { class: 'adjcap' }, 'Bal düzəlişi (— = avtomatik):'), h('div', { class: 'cinp adjrow', style: { marginTop: '2px' } }, adjs.map(a => h('div', {}, a.el)))));
     }
-    form.append(h('div', { class: 'card' }, h('h3', { style: { marginTop: 0 } }, 'Kodlaşdırılan cavablar'), h('p', { class: 'small muted', style: { margin: '0 0 8px' } }, 'Sayt dairələrdən oxuduğu cavabı göstərir (məs.: 12, -3, 2,5). Səhvdirsə düzəldin. «✗» yanında düzgün cavab yazılır.'), cols));
+    form.append(h('div', { class: 'card' }, h('h3', { style: { marginTop: 0 } }, 'Kodlaşdırılan cavablar'), h('p', { class: 'small muted', style: { margin: '0 0 8px' } }, 'Sayt dairələrdən oxuduğu cavabı göstərir (məs.: 12, -3, 2,5). Səhvdirsə düzəldin. «✗» yanında düzgün cavab yazılır. Aşağıdakı «düzəliş» seçimi həmin suala əllə bal verir və avtomatik nəticənin əvəzinə keçir («—» = avtomatik).'), cols));
     if (O.scoreBlock2(c)) appendScoreCards();
   }
   const nxt = nextProblemUid(sc.uid);
@@ -2696,7 +2792,8 @@ function viewResults() {
       });
       const stCls = r.hasErr ? 'err' : r.hasWarn ? 'warn' : 'ok';
       tr.append(h('td', { class: 'n tot gl' }, r.sc.hasKey ? fmt(r.sc.total) : '—'),
-        h('td', { title: r.issues.map(i => i.m).join('\n') }, h('span', { class: 'pill ' + stCls }, r.hasErr ? 'Yoxla' : r.hasWarn ? 'Diqqət' : 'OK'), r.sc.incomplete ? h('span', { class: 'small muted' }, (r.sc.subj.some(x => x.wMissing) ? ' yazılı?' : '') + (r.sc.subj.some(x => x.eMissing) ? ' esse?' : '') + (r.sc.langMissing ? ' dil?' : '')) : null),
+        h('td', { title: r.issues.map(i => i.m).join('\n') }, h('span', { class: 'pill ' + stCls }, r.hasErr ? 'Yoxla' : r.hasWarn ? 'Diqqət' : 'OK'), r.sc.incomplete ? h('span', { class: 'small muted' }, (r.sc.subj.some(x => x.wMissing) ? ' yazılı?' : '') + (r.sc.subj.some(x => x.eMissing) ? ' esse?' : '') + (r.sc.langMissing ? ' dil?' : '')) : null,
+        r.sc.adjN ? h('span', { class: 'small adjmark', title: 'Əllə bal düzəlişi: ' + adjSummary(canonId(r.id)) }, ' ✎' + r.sc.adjN) : null),
         h('td', {}, r.p1 ? h('button', { class: 'btn sm', onclick: () => openEditor(r.p1.uid) }, '1') : null, ' ', r.p2 ? h('button', { class: 'btn sm', onclick: () => openEditor(r.p2.uid) }, '2') : null));
       tb.append(tr);
     }
@@ -2750,7 +2847,7 @@ function itemStats(all, v, lang) {      // lang: null = hamısı; 0/1 = yalnız 
 function topWrongTf(x, num) {
   let b = -1, bv = 0;
   x.wr.forEach((n, j) => { if (n > bv) { bv = n; b = j; } });
-  return b >= 0 ? num + '.' + (b + 1) + ' (' + bv + ')' : '';
+  return b >= 0 ? num + '.' + O.TFL[b] + ' (' + bv + ')' : '';
 }
 function topWrong(x, k) {
   let b = -1, bv = 0;
@@ -2817,7 +2914,7 @@ async function exportXlsx(all) {
       if (xE) row.push(r.hasE && S.nE ? x.Ep : '');
       row.push(r.sc.hasKey ? N(O.r1(x.weighted)) : '');
     });
-    row.push(r.sc.hasKey ? N(O.r1(r.sc.total)) : '', r.issues.filter(i => !/^\d-ci səh\.: Zəif/.test(i.m)).map(i => i.m).concat(r.sc.subj.some(x => x.wMissing) ? ['Yazılı bal(lar) tam daxil edilməyib'] : [], r.sc.subj.some(x => x.eMissing) ? ['Esse balı daxil edilməyib'] : []).join('; '));
+    row.push(r.sc.hasKey ? N(O.r1(r.sc.total)) : '', r.issues.filter(i => !/^\d-ci səh\.: Zəif/.test(i.m)).map(i => i.m).concat(r.sc.subj.some(x => x.wMissing) ? ['Yazılı bal(lar) tam daxil edilməyib'] : [], r.sc.subj.some(x => x.eMissing) ? ['Esse balı daxil edilməyib'] : [], r.sc.adjN ? ['Əllə bal düzəlişi (fənn/sual): ' + adjSummary(canonId(r.id))] : []).join('; '));
     rows.push(row);
   }
   const perS = 6 + (xT ? 1 : 0) + (xE ? 1 : 0);

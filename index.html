@@ -158,6 +158,14 @@ select.adj.on{border-color:#7a5bd0;background:#f1ecfd;color:#3b2a86;font-weight:
 
 /* açar linki */
 .linkbox textarea{width:100%;font-size:12px;line-height:1.35;word-break:break-all;resize:vertical}
+.nmcard{padding:10px 12px}
+.nmrow{align-items:flex-end}
+.nmrow input[type=text]{width:100%}
+.nmrow input:disabled{background:#f1f3f6;color:#8a93a3}
+.nmhint{margin-top:6px}
+td.nmcell{white-space:normal;min-width:110px;font-size:13px}
+.nmnav{margin-top:8px;justify-content:space-between}
+.nmnav .nmpos{min-width:60px;text-align:center}
 
 </style>
 </head>
@@ -1561,7 +1569,7 @@ async function saveFile(name, data, mime) {
 
 /* ---------- vəziyyət ---------- */
 const state = {
-  cfg: O.normalizeCfg({}), scans: [], manual: {}, essay: {}, adj: {}, tab: 'setup', keyVariant: 'A', keyMsg: null, keyPending: null,
+  cfg: O.normalizeCfg({}), scans: [], manual: {}, essay: {}, adj: {}, names: {}, tab: 'setup', keyVariant: 'A', keyMsg: null, keyPending: null,
   chk: { problemOnly: false },
   res: { q: '', sort: 'id', dir: 1 }
 };
@@ -1580,7 +1588,7 @@ let uidN = Date.now();
 let savePending = false;
 function saveNow() {
   savePending = false;
-  try { localStorage.setItem(LS_KEY, JSON.stringify({ cfg: state.cfg, scans: state.scans, manual: state.manual, manualV: 2, essay: state.essay, adj: state.adj, keyVariant: state.keyVariant })); } catch (e) { }
+  try { localStorage.setItem(LS_KEY, JSON.stringify({ cfg: state.cfg, scans: state.scans, manual: state.manual, manualV: 2, essay: state.essay, adj: state.adj, names: state.names, keyVariant: state.keyVariant })); } catch (e) { }
 }
 const saveLater = debounce(saveNow, 400);
 function save() { savePending = true; saveLater(); }
@@ -1591,7 +1599,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 function load() {
   try {
     const j = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
-    if (j) { state.cfg = O.normalizeCfg(j.cfg); fitAllKeys(); state.scans = Array.isArray(j.scans) ? j.scans : []; normScans(); state.manual = cleanManual(j.manual, j.manualV); state.essay = cleanEssay(j.essay); state.adj = cleanAdj(j.adj); state.keyVariant = j.keyVariant || 'A'; }
+    if (j) { state.cfg = O.normalizeCfg(j.cfg); fitAllKeys(); state.scans = Array.isArray(j.scans) ? j.scans : []; normScans(); state.manual = cleanManual(j.manual, j.manualV); state.essay = cleanEssay(j.essay); state.adj = cleanAdj(j.adj); state.names = cleanNames(j.names); state.keyVariant = j.keyVariant || 'A'; }
   } catch (e) { }
 }
 function ensureKey(v) { if (!state.cfg.keys[v]) state.cfg.keys[v] = O.emptyKey(state.cfg); return state.cfg.keys[v]; }
@@ -1621,6 +1629,40 @@ function filledVariants() { return VARS.filter(keyFilled); }
 
 /* ---------- şagirdlər və nəticələr ---------- */
 function rosterName(id) { return state.cfg.roster[normId(id)] || ''; }
+/* Şagirdin soyadı, adı, ata adı və qrupu: yoxlama pəncərəsində vərəqdəki əllə yazıya baxıb müəllim yazır.
+   state.names[5 rəqəmli nömrə] = { s: soyadı, a: adı, p: ata adı, g: qrup } (boş xana yazılmır). Yazılmış ad şagird siyahısındakı adın əvəzinə göstərilir. */
+const NKEYS = ['s', 'a', 'p', 'g'];
+const capFirst = t => t ? (t[0] === 'i' ? 'İ' : t[0] === 'ı' ? 'I' : t[0].toUpperCase()) + t.slice(1) : t;
+const cleanPart = (t, cap) => { t = String(t == null ? '' : t).replace(/\s+/g, ' ').trim().slice(0, 60); return cap ? capFirst(t) : t; };
+function cleanNames(m) {
+  const out = {};
+  if (!m || typeof m !== 'object' || Array.isArray(m)) return out;
+  for (const k of Object.keys(m)) {
+    const id = canonId(k), v = m[k];
+    if (!id || !v || typeof v !== 'object') continue;
+    const rec = {};
+    for (const f of NKEYS) { const t = cleanPart(v[f], f !== 'g'); if (t) rec[f] = t; }
+    if (Object.keys(rec).length) out[id] = rec;
+  }
+  return out;
+}
+function setName(id, f, v) {
+  const rec = state.names[id] || (state.names[id] = {});
+  const t = String(v == null ? '' : v);
+  if (t.trim()) rec[f] = t; else delete rec[f];
+  if (!Object.keys(rec).length) delete state.names[id];
+  save();
+}
+function nameParts(id) {
+  const r = state.names[canonId(id)] || {};
+  const o = {}; for (const f of NKEYS) o[f] = cleanPart(r[f], f !== 'g');
+  return o;
+}
+const typedName = id => { const p = nameParts(id); return [p.s, p.a, p.p].filter(Boolean).join(' '); };
+const studentName = id => typedName(id) || rosterName(id);
+/* axtarış üçün: hərf böyüklüyünə və Azərbaycan hərflərinə (ə, ı, ö, ü, ç, ş, ğ) həssas olmayan forma */
+const FOLDM = { 'ə': 'e', 'ı': 'i', 'ö': 'o', 'ü': 'u', 'ç': 'c', 'ş': 's', 'ğ': 'g' };
+const fold = t => String(t == null ? '' : t).replace(/İ/g, 'i').replace(/I/g, 'i').toLowerCase().replace(/[əıöüçşğ]/g, c => FOLDM[c]);
 /* Yazılı tapşırıqların balını müəllim özü verir (altıda bir hissələrlə: 0, 2, 3, 4, 6). state.manual[5 rəqəmli nömrə] = fənn × tapşırıq balları (-1: daxil edilməyib).
    Şagird üçün əl ilə yazılmış sətir varsa, vərəqdəki «Yoxlayıcı üçün» dairələrindən oxunmuş ballar əvəzinə o götürülür. */
 function canonId(x) { const t = String(x == null ? '' : x).trim(); return /^\d{1,5}$/.test(t) ? t.padStart(5, '0') : null; }
@@ -1773,7 +1815,7 @@ function buildStudents() {
     const essay = effEssay(canonId(st.id), st.p2), hasE = hasAny(essay);
     const data = { variant, lang, closed: st.p1 ? st.p1.closed : null, tf: st.p1 ? st.p1.tf : null, written, coded: st.p2 ? codedStrs(st.p2) : null, essay, adj: state.adj[canonId(st.id)] || null };
     const sc = O.scoreStudent(data, state.cfg);
-    out.push({ id: st.id, name: rosterName(st.id), variant, lang, p1: st.p1, p2: st.p2, sc, issues, data, written, hasW, essay, hasE,
+    out.push({ id: st.id, name: studentName(st.id), nm: nameParts(st.id), roster: rosterName(st.id), variant, lang, p1: st.p1, p2: st.p2, sc, issues, data, written, hasW, essay, hasE,
       hasErr: issues.some(i => i.lv === 'e'), hasWarn: issues.some(i => i.lv === 'w') });
   }
   return out;
@@ -2059,7 +2101,7 @@ function viewSetup() {
       const ncfg = O.normalizeCfg(j.cfg || j);
       const same = O.sigOf(ncfg) === O.sigOf(state.cfg);
       state.cfg = ncfg; fitAllKeys();
-      if (j.scans) { state.scans = j.scans; normScans(); state.manual = cleanManual(j.manual, j.manualV); state.essay = cleanEssay(j.essay); state.adj = cleanAdj(j.adj); markDuplicates(); }
+      if (j.scans) { state.scans = j.scans; normScans(); state.manual = cleanManual(j.manual, j.manualV); state.essay = cleanEssay(j.essay); state.adj = cleanAdj(j.adj); state.names = cleanNames(j.names); markDuplicates(); }
       else if (!same) { state.scans = []; state.manual = {}; state.essay = {}; state.adj = {}; }
       save(); renderAll(); toast('Quraşdırma yükləndi');
     } catch (err) { toast('Fayl oxunmadı'); }
@@ -2068,14 +2110,14 @@ function viewSetup() {
   root.append(h('div', { class: 'card' }, h('h2', {}, 'Saxla / yüklə'),
     h('p', { class: 'sub' }, 'Quraşdırma və nəticələr bu cihazın brauzerində avtomatik saxlanır, amma brauzer yaddaşı təmizlənərsə və ya başqa cihaza keçsəniz itə bilər. İmtahan bitəndən sonra Excel faylını və bu .json ehtiyat faylını mütləq yükləyin.'),
     h('div', { class: 'row' },
-      h('button', { class: 'btn', onclick: () => saveFile(safeName(c.name) + '-layihe.json', JSON.stringify({ cfg: state.cfg, scans: state.scans, manual: state.manual, manualV: 2, essay: state.essay, adj: state.adj }), 'application/json') }, 'Hamısını fayla yaz (.json)'),
+      h('button', { class: 'btn', onclick: () => saveFile(safeName(c.name) + '-layihe.json', JSON.stringify({ cfg: state.cfg, scans: state.scans, manual: state.manual, manualV: 2, essay: state.essay, adj: state.adj, names: state.names }), 'application/json') }, 'Hamısını fayla yaz (.json)'),
       h('button', { class: 'btn', onclick: () => cfgFile.click() }, 'Fayldan yüklə'), cfgFile,
       dlCap ? null : h('button', { class: 'btn', onclick: () => showKeyLink(linkBox) }, 'Açar linki yarat')),
     linkBox,
     h('div', { class: 'row', style: { marginTop: '14px' } },
       h('button', { class: 'btn danger', onclick: async () => {
-        if (await askConfirm('Oxunmuş bütün vərəqlər və ' + (eTotal() ? 'yazılı və esse' : 'yazılı') + ' ballar silinsin? Açar, fənn adları və şagird siyahısı qalacaq. (Əvvəlcə Excel və .json ehtiyatını yüklədiyinizdən əmin olun.)', 'Bəli, təmizlə')) {
-          clearScanData(); save(); renderAll(); toast('Yeni imtahan üçün təmizləndi');
+        if (await askConfirm('Oxunmuş bütün vərəqlər' + (Object.keys(state.names).length ? ', yazdığınız ad-soyadlar' : '') + ' və ' + (eTotal() ? 'yazılı və esse' : 'yazılı') + ' ballar silinsin? Açar, fənn adları və şagird siyahısı qalacaq. (Əvvəlcə Excel və .json ehtiyatını yüklədiyinizdən əmin olun.)', 'Bəli, təmizlə')) {
+          clearScanData(); state.names = {}; save(); renderAll(); toast('Yeni imtahan üçün təmizləndi');
         }
       } }, 'Yeni imtahan üçün təmizlə'))));
   return root;
@@ -2195,7 +2237,7 @@ function viewSheet() {
       h('li', {}, 'A4 kağızda, «Faktiki ölçü / 100%» seçimi ilə çap edin. Vərəqdəki 4 künc və kənar qara kvadratlar tam çıxmalıdır, kəsilməməlidir.'),
       h('li', {}, 'Mümkünsə qara-ağ lazer printer və ya surətçıxaran istifadə edin, çap aydın olsun.'),
       h('li', {}, 'Şagirdlər dairələri qara qələm və ya yumşaq karandaşla tam boyamalıdır. Düzəliş üçün yaxşı silgi lazımdır.'),
-      h('li', {}, 'Vərəqin başındakı cədvələ şagird soyadını, adını, ata adını və qrupunu əlində yazır. Bu xanalar saytda oxunmur, müəllim üçündür; nömrə dairələri isə mütləq boyanmalıdır.'),
+      h('li', {}, 'Vərəqin başındakı cədvələ şagird soyadını, adını, ata adını və qrupunu əlində yazır. Bu xanalar saytda avtomatik oxunmur: yoxlayarkən vərəqin şəklinə baxıb «3 · Yoxlama» bölməsində («Bax / düzəlt») özünüz yazırsınız; nömrə dairələri isə mütləq boyanmalıdır.'),
       h('li', {}, 'Şagirdlər öz nömrəsini və variantı (varsa)' + (flOn() ? ', həmçinin xarici dili' : '') + ' da dairələri boyamaqla göstərir.'),
       nw ? h('li', {}, 'Yazı səhifələrində (' + wbRange() + ') şagird cavabı nömrəsinə uyğun xanada qara və ya tünd göy qələmlə yazır, dairə boyamır. Bu səhifələr saytda oxunmur: müəllim kağızdan yoxlayıb balı verir. Şəkil çəkərkən yalnız oxunan səhifələri (' + (nO === 2 ? '1-ci və 2-ci' : '1-ci') + ') çəkin; yazı səhifəsini səhvən yükləsəniz, sayt onu tanıyıb keçəcək.') : null,
       np > 1 ? h('li', {}, 'İki üzlü çap seçsəniz (uzun kənardan çevirmə), 1-ci və 2-ci səhifələr bir vərəqin iki üzündə çıxır' + (nw ? ', yazı səhifələri isə sonrakı vərəqlərdə' : '') + '.') : null,
@@ -2217,9 +2259,10 @@ function viewCheck() {
     h('p', { class: 'small muted', style: { margin: '10px 0 0' } }, 'Şəkil çəkərkən: vərəq düz stolda olsun, işıqlı yerdə, kölgə düşmədən; telefonu vərəqin üstündən düz tutun; vərəqin 4 küncündəki və kənarlardakı qara kvadratlar tam görünsün. 1-ci və 2-ci səhifələri istənilən sırada yükləyə bilərsiniz: sayt onları şagird nömrəsinə görə birləşdirir.' + (wbPages() ? ' Yazı səhifələrini (' + wbRange() + ') çəkmək lazım deyil: səhvən yükləsəniz, sayt onları tanıyıb keçir.' : ''))));
   ui.check = { prog: h('div', { class: 'card hide' }), summary: h('div', { class: 'cards3' }), table: h('div', {}), };
   root.append(ui.check.prog, h('div', { class: 'card' }, h('h2', {}, 'Oxunan şəkillər'), ui.check.summary,
+    h('p', { class: 'small muted', style: { margin: '8px 0 0' } }, 'Şagirdin soyadını, adını, ata adını və qrupunu «Bax / düzəlt» pəncərəsində yazın: nəticələrdə və Excel-də görünəcək.'),
     h('div', { class: 'row', style: { margin: '12px 0 8px' } },
       h('label', { class: 'row small', style: { gap: '6px' } }, h('input', { type: 'checkbox', checked: state.chk.problemOnly, onchange: e => { state.chk.problemOnly = e.target.checked; refreshCheck(); } }), 'Yalnız diqqət tələb edənlər'),
-      h('button', { class: 'btn sm danger', onclick: async () => { if (state.scans.length && await askConfirm('Bütün oxunmuş şəkillərin nəticələri silinsin?' + (Object.keys(state.manual).length || Object.keys(state.essay).length ? ' (Əl ilə daxil etdiyiniz yazılı' + (eTotal() ? ' və esse' : '') + ' ballar qalacaq.)' : ''), 'Hamısını sil')) { state.scans = []; for (const u of thumbs.values()) { try { URL.revokeObjectURL(u); } catch (e) { } } thumbs.clear(); IDB.clear(); save(); refreshCheck(); } } }, 'Hamısını təmizlə')),
+      h('button', { class: 'btn sm danger', onclick: async () => { if (state.scans.length && await askConfirm('Bütün oxunmuş şəkillərin nəticələri silinsin?' + (Object.keys(state.manual).length || Object.keys(state.essay).length ? ' (Əl ilə daxil etdiyiniz yazılı' + (eTotal() ? ' və esse' : '') + ' ballar qalacaq.)' : '') + (Object.keys(state.names).length ? ' Yazdığınız ad-soyadlar da qalacaq.' : ''), 'Hamısını sil')) { state.scans = []; for (const u of thumbs.values()) { try { URL.revokeObjectURL(u); } catch (e) { } } thumbs.clear(); IDB.clear(); save(); refreshCheck(); } } }, 'Hamısını təmizlə')),
     ui.check.table));
   return root;
 }
@@ -2242,13 +2285,13 @@ function refreshCheck() {
   for (const [n, l] of [[sc.length, 'şəkil'], [students, 'şagird'], [ok.filter(s => s.page === 1).length, '1-ci səhifə']].concat(hasCoded() ? [[ok.filter(s => s.page === 2).length, '2-ci səhifə']] : [], [[probs, 'diqqət tələb edir']]))
     U.summary.append(h('div', { class: 'kpi' }, h('b', {}, n), h('span', {}, l)));
   const rows = sc.slice().reverse().filter(s => { if (!state.chk.problemOnly) return true; const t = scanStatus(s); return t.cls === 'err' || t.cls === 'warn'; });
-  const tb = h('table', { class: 't' }, h('thead', {}, h('tr', {}, ['Fayl', 'Səhifə', 'Nömrə', 'Variant'].concat(flOn() ? ['Dil'] : [], ['Vəziyyət', 'Qeyd', '']).map(x => h('th', {}, x)))));
+  const tb = h('table', { class: 't' }, h('thead', {}, h('tr', {}, ['Fayl', 'Səhifə', 'Nömrə', 'Ad', 'Variant'].concat(flOn() ? ['Dil'] : [], ['Vəziyyət', 'Qeyd', '']).map(x => h('th', {}, x)))));
   const body = h('tbody');
   for (const s of rows.slice(0, 700)) {
     const t = scanStatus(s);
     const note = scanNotes(s).join(' · ');
     body.append(h('tr', {},
-      h('td', {}, s.file), h('td', {}, s.ok ? s.page : '—'), h('td', {}, s.id || '—'), h('td', {}, s.variant || '—'),
+      h('td', {}, s.file), h('td', {}, s.ok ? s.page : '—'), h('td', {}, s.id || '—'), h('td', { class: 'nmcell' }, s.ok && s.id ? studentName(s.id) : ''), h('td', {}, s.variant || '—'),
       flOn() ? h('td', {}, s.ok && s.page === 1 ? flName(s.lang) : '—') : null,
       h('td', {}, h('span', { class: 'pill ' + t.cls }, t.t)),
       h('td', { style: { whiteSpace: 'normal', maxWidth: '460px', fontSize: '12.5px', color: '#5d6878' } }, note),
@@ -2315,6 +2358,16 @@ function nextProblemUid(uid) {
   }
   return null;
 }
+/* şagirdlər nömrə sırası ilə: hər şagird üçün aktiv 1-ci səhifə vərəqi (o yoxdursa 2-ci səhifə): ad yazarkən «növbəti şagird» üçün */
+function studentScans() {
+  const m = new Map();
+  for (const s of state.scans) {
+    if (!s.ok || s.dup || !s.id) continue;
+    const id = canonId(s.id); if (!id) continue;
+    const cur = m.get(id); if (!cur || (s.page === 1 && cur.page !== 1)) m.set(id, s);
+  }
+  return [...m.keys()].sort().map(k => m.get(k));
+}
 let dirty = false;
 function removeModal() { const m = document.getElementById('modalroot'); if (m) m.remove(); }
 function closeModal() {
@@ -2376,7 +2429,7 @@ function openEditor(uid) {
   const pill = h('span', { class: 'pill' });
   function paintPill() { const t = scanStatus(sc); pill.className = 'pill ' + t.cls; pill.textContent = t.t; }
   paintPill();
-  const titleText = () => (sc.page + '-ci səhifə · nömrə ' + (sc.id || '?') + (rosterName(sc.id) ? ' · ' + rosterName(sc.id) : '') + ' · ' + sc.file);
+  const titleText = () => (sc.page + '-ci səhifə · nömrə ' + (sc.id || '?') + (studentName(sc.id) ? ' · ' + studentName(sc.id) : '') + ' · ' + sc.file);
   title.textContent = titleText();
   form.append(h('div', { class: 'row' }, h('div', {}, h('label', { class: 'f' }, 'Şagird nömrəsi'), idI), h('div', {}, h('label', { class: 'f' }, 'Variant'), varS),
     langS ? h('div', {}, h('label', { class: 'f' }, 'Xarici dil'), langS) : null,
@@ -2384,6 +2437,37 @@ function openEditor(uid) {
   if ((sc.flags || []).length) form.append(h('div', { class: 'note warn small' }, sc.flags.map(f => h('div', {}, '• ' + f.m))));
   const paints = [];
   function paintAll() { paints.forEach(f => f()); }
+  /* soyadı, adı, ata adı, qrup: vərəqin yuxarısındakı əllə yazıya baxıb yazılır; şagirdin hər iki səhifəsi üçün eynidir (nömrəyə bağlıdır) */
+  const nameDefs = [['s', 'Soyadı', '1 1 140px'], ['a', 'Adı', '1 1 120px'], ['p', 'Ata adı', '1 1 140px'], ['g', 'Qrup', '0 1 84px']];
+  const nameEls = nameDefs.map(([f, lb, flex], i) => {
+    const sync = () => { dirty = true; title.textContent = titleText(); };
+    const el = h('input', { type: 'text', maxlength: 60, autocomplete: 'off', spellcheck: 'false', autocapitalize: f === 'g' ? 'off' : 'sentences', 'data-name': f, placeholder: lb,
+      oninput: e => { const id = canonId(sc.id); if (!id) return; setName(id, f, e.target.value); sync(); },
+      onchange: e => { const id = canonId(sc.id); if (!id) return; const t = cleanPart(e.target.value, f !== 'g'); e.target.value = t; setName(id, f, t); sync(); },
+      onkeydown: ev => { if (ev.key !== 'Enter') return; ev.preventDefault(); const nx = nameEls[i + 1]; if (nx) { nx.el.focus(); nx.el.select(); } else ev.target.blur(); } });
+    return { f, lb, flex, el };
+  });
+  const nameHint = h('div', { class: 'small muted nmhint' }, 'Ad yazmaq üçün əvvəlcə 5 rəqəmli şagird nömrəsini düzgün yazın.');
+  /* növbəti / əvvəlki şagirdin vərəqi (nömrə sırası ilə): adlar yazılanda hər şagird üçün cədvələ qayıtmaq lazım olmasın */
+  const stuAt = d => { const list = studentScans(), id = canonId(sc.id), i = id ? list.findIndex(x => canonId(x.id) === id) : -1; return { list, i, t: i < 0 ? null : (list[i + d] || null) }; };
+  const goStu = d => {
+    const t = stuAt(d).t; if (!t) return;
+    openEditor(t.uid);
+    if (window.matchMedia && window.matchMedia('(pointer: fine)').matches) { const f0 = document.querySelector('.modal input[data-name]'); if (f0 && !f0.disabled) f0.focus(); }
+  };
+  const prevB = h('button', { class: 'btn sm', type: 'button', 'data-nav': 'prev', onclick: () => goStu(-1) }, '‹ Əvvəlki şagird');
+  const nextB = h('button', { class: 'btn sm', type: 'button', 'data-nav': 'next', onclick: () => goStu(1) }, 'Növbəti şagird ›');
+  const posEl = h('span', { class: 'small muted nmpos' });
+  form.append(h('div', { class: 'card nmcard' }, h('div', { class: 'row nmrow' }, nameEls.map(x => h('div', { style: { flex: x.flex, minWidth: 0 } }, h('label', { class: 'f' }, x.lb), x.el))), nameHint,
+    h('div', { class: 'row nmnav' }, prevB, posEl, nextB)));
+  paints.push(() => {
+    const id = canonId(sc.id), r = id ? (state.names[id] || {}) : {};
+    nameEls.forEach(x => { x.el.disabled = !id; if (document.activeElement !== x.el) x.el.value = r[x.f] || ''; });
+    nameHint.classList.toggle('hide', !!id);
+    const k = stuAt(0);
+    posEl.textContent = k.i < 0 ? '' : (k.i + 1) + ' / ' + k.list.length;
+    prevB.disabled = k.i <= 0; nextB.disabled = k.i < 0 || k.i >= k.list.length - 1;
+  });
   /* sual üzrə əllə bal düzəlişi: «—» avtomatik hesablama deməkdir, seçilən bal həmin sual üçün avtomatik nəticənin əvəzinə keçir */
   function mkAdj(kind, s, i) {
     const el = h('select', { class: 'adj', 'data-adj': kind + s + '-' + i, title: 'Bal düzəlişi: bu sual üçün avtomatik nəticənin əvəzinə seçdiyiniz bal verilir. «—» = avtomatik hesablama.',
@@ -2633,8 +2717,8 @@ function openWritten() {
     p1m = new Map(); p2m = new Map();
     for (const sc of state.scans) if (sc.ok && !sc.dup && sc.id && (sc.page === 1 || sc.page === 2)) (sc.page === 1 ? p1m : p2m).set(canonId(sc.id) || sc.id, sc);
     let ids = writtenUniverse();
-    const qq = view.q.trim().toLowerCase();
-    if (qq) ids = ids.filter(id => id.includes(qq) || String(parseInt(id, 10)).includes(qq) || rosterName(id).toLowerCase().includes(qq));
+    const qq = view.q.trim();
+    if (qq) { const fq = fold(qq); ids = ids.filter(id => id.includes(qq) || String(parseInt(id, 10)).includes(qq) || fold([studentName(id), rosterName(id), nameParts(id).g].join(' ')).includes(fq)); }
     if (view.only) ids = ids.filter(id => !isFull(id));
     const tbody = h('tbody'); rows = [];
     for (const id of ids) {
@@ -2679,7 +2763,7 @@ function openWritten() {
         else if (ev.key === 'ArrowUp') { ev.preventDefault(); go(r, -1, k); }
       }));
       rows.push(r);
-      const nm = rosterName(id);
+      const nm = studentName(id);
       tbody.append(h('tr', {}, h('td', {}, h('b', {}, id), nm ? h('div', { class: 'small muted', style: { whiteSpace: 'normal' } }, nm) : null), h('td', {}, h('div', { class: 'qe' }, cellKids)), h('td', {}, r.stat, h('div', { class: 'small muted' }, r.src))));
       paintRow(r);
     }
@@ -2776,8 +2860,8 @@ function viewResults() {
   for (let s = 0; s < NS; s++) cmp['s' + s] = (a, b) => a.sc.subj[s].weighted - b.sc.subj[s].weighted;
   function paintTable() {
     let rows = all.slice();
-    const qq = state.res.q.trim().toLowerCase();
-    if (qq) rows = rows.filter(r => r.id.includes(qq) || r.name.toLowerCase().includes(qq));
+    const qq = state.res.q.trim();
+    if (qq) { const fq = fold(qq); rows = rows.filter(r => r.id.includes(qq) || fold([r.name, r.roster, r.nm.g].join(' ')).includes(fq)); }
     rows.sort((a, b) => state.res.dir * cmp[state.res.sort](a, b));
     const th = (k, label, cls) => h('th', { class: 'sortable ' + (cls || ''), rowspan: 2, onclick: () => { if (state.res.sort === k) state.res.dir *= -1; else { state.res.sort = k; state.res.dir = (k === 'total' || k.startsWith('s')) ? -1 : 1; } paintTable(); } }, label + (state.res.sort === k ? (state.res.dir > 0 ? ' ▲' : ' ▼') : ''));
     const h1 = h('tr', {}, th('id', 'Nömrə'), th('name', 'Ad'), h('th', { rowspan: 2 }, 'Var.'), flOn() ? h('th', { rowspan: 2, title: 'Şagirdin vərəqdə seçdiyi xarici dil' }, 'Dil') : null);
@@ -2790,7 +2874,7 @@ function viewResults() {
     const tb = h('tbody');
     for (const r of rows) {
       const tr = h('tr', { class: 'clk', onclick: e => { if (e.target.closest('button')) return; if (r.p1 || r.p2) openEditor((r.p1 || r.p2).uid); else openWritten(); } },
-        h('td', {}, r.id), h('td', {}, r.name), h('td', {}, r.variant || '—'), flOn() ? h('td', {}, flName(r.lang)) : null);
+        h('td', {}, r.id), h('td', {}, r.name, r.nm.g ? h('span', { class: 'small muted' }, ' · ' + r.nm.g) : null), h('td', {}, r.variant || '—'), flOn() ? h('td', {}, flName(r.lang)) : null);
       r.sc.subj.forEach((x, si) => {
         const S = c.subjects[si];
         tr.append(h('td', { class: 'n gl' }, r.p1 && S.rows ? fmtW(x.D + x.Tp) : '—'), h('td', { class: 'n' }, r.p1 && S.nC ? x.Y : '—'), h('td', { class: 'n' }, r.p2 && S.nK ? x.K : '—'), h('td', { class: 'n' }, (r.hasW && S.nW) || (r.hasE && S.nE) ? fmtW(x.Wp + x.Ep) : '—'),
@@ -2905,13 +2989,18 @@ async function exportXlsx(all) {
   const H = x => ({ v: x, s: 1 }), N = x => ({ v: x, s: 2 });
   const xT = tTotal() > 0, xE = eTotal() > 0;
   const xF = flOn(), flCell = r => r.lang === 0 || r.lang === 1 ? c.fl.n[r.lang] : '';
-  const head = [H('Nömrə'), H('Ad'), H('Variant')].concat(xF ? [H('Xarici dil')] : []);
+  /* ad sütunları: yoxlama pəncərəsində soyad/ad/ata adı yazılıbsa ayrı sütunlar, yoxsa (yalnız siyahıdakı ad) əvvəlki kimi tək «Ad» sütunu */
+  const xN = all.some(r => r.nm.s || r.nm.a || r.nm.p || r.nm.g), xG = all.some(r => r.nm.g), xR = !xN || all.some(r => r.roster);
+  const nameHead = xN ? [H('Soyadı'), H('Adı'), H('Ata adı')].concat(xG ? [H('Qrup')] : [], xR ? [H('Ad (siyahıdan)')] : []) : [H('Ad')];
+  const nameRow = r => xN ? [r.nm.s, r.nm.a, r.nm.p].concat(xG ? [r.nm.g] : [], xR ? [r.roster] : []) : [r.name];
+  const nameW = xN ? [16, 14, 18].concat(xG ? [8] : [], xR ? [22] : []) : [24];
+  const head = [H('Nömrə')].concat(nameHead, [H('Variant')], xF ? [H('Xarici dil')] : []);
   c.subjects.forEach(s => ['Düz (qapalı)', 'Yanlış (qapalı)', 'Boş (qapalı)'].concat(xT ? ['Doğru/yanlış balı'] : [], ['Kod düz', 'Yazılı bal'], xE ? ['Esse balı'] : [], ['Fənn balı']).forEach(x => head.push(H(s.name + ' · ' + x))));
   head.push(H('Cəmi bal'), H('Qeyd'));
   const sorted = all.slice().sort((a, b) => a.id.localeCompare(b.id));
   const rows = [head];
   for (const r of sorted) {
-    const row = [r.id, r.name, r.variant || ''].concat(xF ? [flCell(r)] : []);
+    const row = [r.id].concat(nameRow(r), [r.variant || ''], xF ? [flCell(r)] : []);
     r.sc.subj.forEach((x, si) => {
       const S = SJL[si];
       row.push(r.p1 && S.nC ? x.D : '', r.p1 && S.nC ? x.Y : '', r.p1 && S.nC ? x.B : '');
@@ -2924,13 +3013,13 @@ async function exportXlsx(all) {
     rows.push(row);
   }
   const perS = 6 + (xT ? 1 : 0) + (xE ? 1 : 0);
-  const widths = [10, 24, 8].concat(xF ? [14] : []); for (let i = 0; i < NS * perS; i++) widths.push(14); widths.push(12, 50);
+  const widths = [10].concat(nameW, [8], xF ? [14] : []); for (let i = 0; i < NS * perS; i++) widths.push(14); widths.push(12, 50);
   const sheet1 = { name: 'Nəticələr', rows, widths, header: 1 };
   // cavablar
-  const aRows = [[H('Nömrə'), H('Ad'), H('Variant')].concat(xF ? [H('Xarici dil')] : [])];
+  const aRows = [[H('Nömrə')].concat(nameHead, [H('Variant')], xF ? [H('Xarici dil')] : [])];
   c.subjects.forEach(s => { aRows[0].push(H(s.name + ' · qapalı')); if (xT) aRows[0].push(H(s.name + ' · doğru/yanlış')); aRows[0].push(H(s.name + ' · kod'), H(s.name + ' · yazılı')); if (xE) aRows[0].push(H(s.name + ' · esse')); });
   for (const r of sorted) {
-    const row = [r.id, r.name, r.variant || ''].concat(xF ? [flCell(r)] : []);
+    const row = [r.id].concat(nameRow(r), [r.variant || ''], xF ? [flCell(r)] : []);
     for (let s = 0; s < NS; s++) {
       row.push(r.p1 ? r.p1.closed[s].map(a => a === -1 ? '-' : a === -2 ? '*' : LET[a]).join('') : '');
       if (xT) row.push(r.p1 && r.p1.tf && SJL[s].nT ? r.p1.tf[s].map(b => b.map(a => a === -1 ? '-' : a === -2 ? '*' : a === 0 ? 'D' : 'Y').join('')).join(' ') : '');
@@ -2940,7 +3029,7 @@ async function exportXlsx(all) {
     aRows.push(row);
   }
   const perA = 3 + (xT ? 1 : 0) + (xE ? 1 : 0);
-  const sheet2 = { name: 'Cavablar', rows: aRows, widths: [10, 24, 8, ...(xF ? [14] : []), ...range(NS * perA).map(i => i % perA === 0 ? 28 : 22)], header: 1 };
+  const sheet2 = { name: 'Cavablar', rows: aRows, widths: [10, ...nameW, 8, ...(xF ? [14] : []), ...range(NS * perA).map(i => i % perA === 0 ? 28 : 22)], header: 1 };
   // sual təhlili (variantlar üzrə)
   const iRows = [[H('Variant'), H('Fənn'), H('Sual'), H('Düz'), H('Yanlış'), H('Boş'), H('% düz'), H('Ən çox seçilən səhv')]];
   for (const v of filledVariants()) {

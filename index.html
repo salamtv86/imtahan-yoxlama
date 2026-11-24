@@ -156,6 +156,9 @@ select.adj.on{border-color:#7a5bd0;background:#f1ecfd;color:#3b2a86;font-weight:
 .adjcap{font-size:11.5px;color:#7a5bd0;margin-top:6px}
 .adjmark{color:#5b3fc4;font-weight:600;cursor:help}
 
+/* açar linki */
+.linkbox textarea{width:100%;font-size:12px;line-height:1.35;word-break:break-all;resize:vertical}
+
 </style>
 </head>
 <body>
@@ -2061,11 +2064,14 @@ function viewSetup() {
       save(); renderAll(); toast('Quraşdırma yükləndi');
     } catch (err) { toast('Fayl oxunmadı'); }
   } });
+  const linkBox = h('div', { class: 'linkbox' });
   root.append(h('div', { class: 'card' }, h('h2', {}, 'Saxla / yüklə'),
     h('p', { class: 'sub' }, 'Quraşdırma və nəticələr bu cihazın brauzerində avtomatik saxlanır, amma brauzer yaddaşı təmizlənərsə və ya başqa cihaza keçsəniz itə bilər. İmtahan bitəndən sonra Excel faylını və bu .json ehtiyat faylını mütləq yükləyin.'),
     h('div', { class: 'row' },
       h('button', { class: 'btn', onclick: () => saveFile(safeName(c.name) + '-layihe.json', JSON.stringify({ cfg: state.cfg, scans: state.scans, manual: state.manual, manualV: 2, essay: state.essay, adj: state.adj }), 'application/json') }, 'Hamısını fayla yaz (.json)'),
-      h('button', { class: 'btn', onclick: () => cfgFile.click() }, 'Fayldan yüklə'), cfgFile),
+      h('button', { class: 'btn', onclick: () => cfgFile.click() }, 'Fayldan yüklə'), cfgFile,
+      dlCap ? null : h('button', { class: 'btn', onclick: () => showKeyLink(linkBox) }, 'Açar linki yarat')),
+    linkBox,
     h('div', { class: 'row', style: { marginTop: '14px' } },
       h('button', { class: 'btn danger', onclick: async () => {
         if (await askConfirm('Oxunmuş bütün vərəqlər və ' + (eTotal() ? 'yazılı və esse' : 'yazılı') + ' ballar silinsin? Açar, fənn adları və şagird siyahısı qalacaq. (Əvvəlcə Excel və .json ehtiyatını yüklədiyinizdən əmin olun.)', 'Bəli, təmizlə')) {
@@ -2967,11 +2973,60 @@ async function exportXlsx(all) {
   if (ok) toast('Excel faylı hazırdır');
 }
 
+/* ---------- açar linki ----------
+   Quraşdırma və cavab açarları linkin #acar= hissəsində saxlanır (saytın faylında və ya serverdə yox), ona görə açar hər kəsə görünmür.
+   Telefonda linkə toxunanda quraşdırma və açarlar həmin brauzerə yazılır. */
+const b64u = u8 => { let t = ''; for (let i = 0; i < u8.length; i += 0x2000) t += String.fromCharCode.apply(null, u8.subarray(i, i + 0x2000)); return btoa(t).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+const unb64u = t => { t = t.replace(/-/g, '+').replace(/_/g, '/'); while (t.length % 4) t += '='; const bin = atob(t), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; };
+function keyLinkOf(cfg) {
+  const c = JSON.parse(JSON.stringify(cfg));
+  c.roster = {};                                                           // şagird siyahısı linkə düşmür (uzun olur)
+  c.subjects = c.subjects.map(s => ({ name: s.name, coef: s.coef, pat: s.pat, from: s.from }));   // qalanı quraşdırmadan yenidən hesablanır
+  return location.href.split('#')[0] + '#acar=' + b64u(new TextEncoder().encode(JSON.stringify({ v: 1, cfg: c })));
+}
+function showKeyLink(box) {
+  const url = keyLinkOf(state.cfg);
+  const ta = h('textarea', { readonly: true, rows: 5, class: 'mono', spellcheck: 'false', onclick: e => e.target.select() });
+  ta.value = url;
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(url); toast('Link kopyalandı'); return; } catch (e) { }
+    ta.focus(); ta.select();
+    try { document.execCommand('copy'); toast('Link kopyalandı'); } catch (e) { toast('Linki seçib kopyalayın'); }
+  };
+  box.replaceChildren(
+    h('p', { class: 'sub', style: { marginTop: '12px' } }, 'Bu linkə telefonda toxunun: quraşdırma və açarlar həmin brauzerə yüklənəcək. Linkdə cavab açarı var, onu başqasına verməyin. Açarı dəyişsəniz, linki yenidən yaradın.'),
+    ta, h('div', { class: 'row', style: { marginTop: '8px' } }, h('button', { class: 'btn', onclick: copy }, 'Kopyala')));
+}
+function hasKeyData(cfg) {
+  const any = v => Array.isArray(v) ? v.some(any) : (v && typeof v === 'object') ? Object.keys(v).some(k => any(v[k])) : typeof v === 'number' ? v >= 0 : typeof v === 'string' && v.trim() !== '';
+  return Object.keys(cfg.keys || {}).some(v => any(cfg.keys[v]));
+}
+async function applyKeyLink() {
+  const m = /^#acar=([A-Za-z0-9_-]+)/.exec(location.hash);
+  if (!m) return;
+  try { history.replaceState(null, '', location.href.split('#')[0]); } catch (e) { }      // açar ünvan sətrində qalmasın, yenilənəndə təkrar yüklənməsin
+  let ncfg;
+  try { const j = JSON.parse(new TextDecoder().decode(unb64u(m[1]))); if (!j || typeof j.cfg !== 'object' || !j.cfg) throw 0; ncfg = O.normalizeCfg(j.cfg); }
+  catch (e) { toast('Açar linki oxunmadı. Linkin hamısını kopyaladığınızdan əmin olun.', 6000); return; }
+  const same = O.sigOf(ncfg) === O.sigOf(state.cfg);
+  if (state.scans.length || hasKeyData(state.cfg)) {
+    const ok = await askConfirm('Linkdəki quraşdırma və açarlar yüklənsin? Bu brauzerdəki cari quraşdırma və açarlar əvəz olunacaq. ' + (!state.scans.length ? '' : same ? 'Oxunmuş vərəqlər qalacaq.' : 'İmtahan quruluşu fərqlidir, ona görə oxunmuş vərəqlər və ballar silinəcək.'), 'Bəli, yüklə');
+    if (!ok) return;
+  }
+  if (!Object.keys(ncfg.roster || {}).length) ncfg.roster = state.cfg.roster || {};      // brauzerdəki şagird siyahısı qalır
+  state.cfg = ncfg; fitAllKeys();
+  if (!same) { state.scans = []; state.manual = {}; state.essay = {}; state.adj = {}; }
+  state.tab = 'setup'; saveNow(); renderAll(); window.scrollTo({ top: 0 });
+  toast('Quraşdırma və açarlar linkdən yükləndi', 5000);
+}
+
 /* ---------- başlanğıc ---------- */
 load();
 markDuplicates();
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 renderAll();
+window.addEventListener('hashchange', applyKeyLink);
+applyKeyLink();
 })();
 
 </script>

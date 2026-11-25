@@ -2872,6 +2872,209 @@ function openWritten() {
   build();
 }
 
+/* =====================  ŞAGİRDLƏR ÜÇÜN NƏTİCƏ SƏHİFƏSİ  =====================
+   «4 · Nəticələr»-dəki düymə hazır nəticələri şifrələnmiş TƏK .html faylına yazır. Faylı GitHub-a yükləyirsiniz; şagird 5 rəqəmli nömrəsini
+   (istəyə görə + 4 rəqəmli PIN) yazır və yalnız öz sətrini görür. Heç bir serverə nəsə göndərilmir, AI/kredit yoxdur.
+   Şifrələmə: açar = PBKDF2-SHA256(nömrə[:PIN], təsadüfi duz, NETICE_IT) → AES-256-GCM; sətrin axtarış nişanı həmin açardan çıxır (nömrələr faylda yoxdur).
+   Faylda açıq mətn yoxdur: nə ad, nə nömrə, nə bal. Sətir uzunluqları bərabərləşdirilir. */
+const NETICE_VIEW = "<!DOCTYPE html>\n<html lang=\"az\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<meta name=\"robots\" content=\"noindex,nofollow\">\n<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'\">\n<title>/*@TITLE@*/<\/title>\n<style>\n:root{--bg:#f4f5f7;--card:#fff;--ink:#18202c;--muted:#5d6878;--line:#dde1e8;--acc:#1f5fd0;--acc-d:#174aa5;--warn-l:#fff3dc;--err-l:#fde8e6}\n*{box-sizing:border-box}\nbody{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,\"Segoe UI\",Roboto,Arial,sans-serif}\nmain{max-width:520px;margin:0 auto;padding:22px 16px 44px}\nh1{font-size:20px;line-height:1.3;margin:4px 0 6px}\n.sub{color:var(--muted);font-size:14.5px;margin:0 0 16px}\n.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:0 0 14px}\nlabel{display:block;font-size:14px;color:var(--muted);margin:0 0 4px}\n.fld{margin:0 0 12px}\ninput{width:100%;font:inherit;font-size:20px;padding:10px 12px;border:1px solid #c9cfd9;border-radius:10px;letter-spacing:.1em;background:#fff;color:var(--ink)}\ninput:focus{outline:2px solid #9cbcf3;border-color:var(--acc)}\nbutton{font:inherit;font-weight:600;border:0;border-radius:10px;padding:12px 16px;cursor:pointer;background:var(--acc);color:#fff;width:100%}\nbutton:hover{background:var(--acc-d)}\nbutton:disabled{opacity:.55;cursor:default}\nbutton.alt{background:#fff;color:var(--ink);border:1px solid #c3cad6;margin-top:12px}\nbutton.alt:hover{background:#f1f3f7}\n.msg{margin:12px 0 0;padding:10px 12px;border-radius:10px;font-size:14.5px}\n.msg.err{background:var(--err-l);color:#7a1f19;border:1px solid #efc2be}\n.msg.warn{background:var(--warn-l);color:#6b3f00;border:1px solid #f0d9a8}\n.who{color:var(--muted);font-size:14px;margin:0 0 6px;text-align:center}\n.tot{text-align:center;padding:4px 0 14px;border-bottom:1px solid var(--line)}\n.tot b{display:block;font-size:46px;line-height:1.1}\n.tot span{color:var(--muted);font-size:14px}\n.sj{display:flex;justify-content:space-between;gap:10px;padding:12px 0 2px;font-weight:600}\n.sj em{font-style:normal;white-space:nowrap}\n.pt{color:var(--muted);font-size:13.5px;padding:0 0 10px;border-bottom:1px solid var(--line)}\n.pt:last-of-type{border-bottom:0}\n.pt span{white-space:nowrap;margin-right:12px;display:inline-block}\n.foot{color:var(--muted);font-size:13px;margin:0}\n[hidden]{display:none!important}\n<\/style>\n<\/head>\n<body>\n<main>\n<h1 id=\"ttl\"><\/h1>\n<p class=\"sub\" id=\"intro\"><\/p>\n<form id=\"f\" class=\"card\" autocomplete=\"off\" novalidate>\n  <div class=\"fld\"><label for=\"num\">Şagird nömrəsi<\/label><input id=\"num\" type=\"text\" inputmode=\"numeric\" maxlength=\"5\" autocomplete=\"off\" autocapitalize=\"off\" spellcheck=\"false\" enterkeyhint=\"go\"><\/div>\n  <div class=\"fld\" id=\"pinrow\" hidden><label for=\"pin\">Şəxsi kod (PIN)<\/label><input id=\"pin\" type=\"password\" inputmode=\"numeric\" maxlength=\"4\" autocomplete=\"off\" spellcheck=\"false\" enterkeyhint=\"go\"><\/div>\n  <button id=\"go\" type=\"submit\">Nəticəni göstər<\/button>\n  <div id=\"msg\" role=\"alert\" hidden><\/div>\n<\/form>\n<section id=\"res\" class=\"card\" hidden aria-live=\"polite\"><\/section>\n<p class=\"foot\" id=\"foot\"><\/p>\n<noscript><p class=\"msg err\">Bu səhifənin işləməsi üçün brauzerdə JavaScript aktiv olmalıdır.<\/p><\/noscript>\n<\/main>\n<script id=\"cfg\" type=\"application/json\">/*@DATA@*/<\/script>\n<script>\n(function () {\n  'use strict';\n  var $ = function (id) { return document.getElementById(id); };\n  var C = null;\n  try { C = JSON.parse($('cfg').textContent); } catch (e) { }\n  var msg = $('msg'), go = $('go'), res = $('res'), form = $('f');\n  function showMsg(kind, text) { msg.className = 'msg ' + kind; msg.textContent = text; msg.hidden = false; }\n  function hideMsg() { msg.hidden = true; msg.textContent = ''; }\n  if (!C) { showMsg('err', 'Səhifənin məlumatı oxunmadı.'); go.disabled = true; return; }\n  $('ttl').textContent = C.t || 'Nəticələr';\n  document.title = C.t || 'Nəticələr';\n  $('intro').textContent = 'Nəticənizi öyrənmək üçün cavab vərəqində boyadığınız 5 rəqəmli şagird nömrəsini' + (C.pin ? ' və müəllimin verdiyi 4 rəqəmli şəxsi kodu (PIN)' : '') + ' yazın.';\n  if (C.pin) $('pinrow').hidden = false;\n  var d = new Date(C.g || Date.now()), p2 = function (n) { return (n < 10 ? '0' : '') + n; };\n  $('foot').textContent = 'Nəticələr ' + p2(d.getDate()) + '.' + p2(d.getMonth() + 1) + '.' + d.getFullYear() + ', ' + p2(d.getHours()) + ':' + p2(d.getMinutes()) + ' tarixində yenilənib.' + (C.note ? ' ' + C.note : '');\n\n  var enc = new TextEncoder(), dec = new TextDecoder();\n  var subtle = window.crypto && window.crypto.subtle;\n  if (!subtle) { showMsg('err', 'Bu brauzer şifrəli səhifəni aça bilmir. Səhifəni telefonun və ya kompüterin adi brauzerində (https ilə) açın.'); go.disabled = true; return; }\n  function b64d(s) { var b = atob(s), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }\n  function hex(u) { var s = ''; for (var i = 0; i < u.length; i++) s += (u[i] < 16 ? '0' : '') + u[i].toString(16); return s; }\n  function cat(a, b) { var u = new Uint8Array(a.length + b.length); u.set(a, 0); u.set(b, a.length); return u; }\n  async function derive(secret) {\n    var km = await subtle.importKey('raw', enc.encode(secret), 'PBKDF2', false, ['deriveBits']);\n    var m = new Uint8Array(await subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: b64d(C.salt), iterations: C.it }, km, 256));\n    var t = new Uint8Array(await subtle.digest('SHA-256', cat(enc.encode('tag'), m)));\n    var k = new Uint8Array(await subtle.digest('SHA-256', cat(enc.encode('key'), m)));\n    return { tag: hex(t.subarray(0, 8)), key: k };\n  }\n  async function openRec(secret) {\n    var dk = await derive(secret);\n    if (!Object.prototype.hasOwnProperty.call(C.r, dk.tag)) return null;\n    var rec = C.r[dk.tag];\n    var key = await subtle.importKey('raw', dk.key, 'AES-GCM', false, ['decrypt']);\n    try {\n      var pt = await subtle.decrypt({ name: 'AES-GCM', iv: b64d(rec[0]) }, key, b64d(rec[1]));\n      return JSON.parse(dec.decode(pt));\n    } catch (e) { return null; }\n  }\n  function num(x, one) {\n    if (typeof x !== 'number' || !isFinite(x)) return '—';\n    var v = one ? (Math.round(x * 10) / 10).toFixed(1) : String(Math.round(x * 100) / 100);\n    return v.replace('.', ',');\n  }\n  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }\n  function render(r) {\n    res.textContent = '';\n    var who = 'Şagird № ' + (r.i || '') + (r.n ? ' · ' + r.n : '');   // r.i: şifrələnmiş sətirdəki nömrə\n    res.appendChild(el('p', 'who', who));\n    var tot = el('div', 'tot');\n    tot.appendChild(el('b', '', num(r.t, true)));\n    tot.appendChild(el('span', '', 'cəmi bal (maksimum ' + num(r.m, false) + ')'));\n    res.appendChild(tot);\n    (r.s || []).forEach(function (s) {\n      var row = el('div', 'sj');\n      row.appendChild(el('span', '', s[0]));\n      row.appendChild(el('em', '', num(s[1], true) + ' / ' + num(s[2], false)));\n      res.appendChild(row);\n      var parts = s[3] || [];\n      if (parts.length) {\n        var pt = el('div', 'pt');\n        parts.forEach(function (q) { pt.appendChild(el('span', '', q[0] + ': ' + num(q[1], false))); });\n        res.appendChild(pt);\n      }\n    });\n    if (r.x) { var w = el('p', 'msg warn', 'Diqqət: açıq tapşırıqların (yazılı/esse) balı hələ tam daxil edilməyib, ona görə cəmi bal dəyişə bilər.'); res.appendChild(w); }\n    var again = el('button', 'alt', 'Başqa nömrə yoxla');\n    again.type = 'button';\n    again.addEventListener('click', function () {\n      res.hidden = true; res.textContent = ''; form.hidden = false;\n      $('num').value = ''; if (C.pin) $('pin').value = '';\n      $('num').focus();\n    });\n    res.appendChild(again);\n    res.hidden = false;\n    form.hidden = true;\n    try { res.scrollIntoView({ block: 'start' }); } catch (e) { }\n  }\n  var fails = 0, lockUntil = 0, timer = null, busy = false;\n  function tick() {\n    var left = Math.ceil((lockUntil - Date.now()) / 1000);\n    if (left > 0) { go.disabled = true; showMsg('warn', 'Çox sayda yanlış cəhd. ' + left + ' saniyə gözləyin.'); timer = setTimeout(tick, 500); }\n    else { go.disabled = false; hideMsg(); }\n  }\n  form.addEventListener('submit', async function (e) {\n    e.preventDefault();\n    if (busy || Date.now() < lockUntil) return;\n    hideMsg(); res.hidden = true;\n    var id = ($('num').value || '').replace(/\\D/g, '');\n    if (!id || id.length > 5) { showMsg('err', '5 rəqəmli şagird nömrəsini yazın.'); return; }\n    while (id.length < 5) id = '0' + id;\n    var pin = '';\n    if (C.pin) { pin = ($('pin').value || '').replace(/\\D/g, ''); if (pin.length !== 4) { showMsg('err', '4 rəqəmli şəxsi kodu (PIN) yazın.'); return; } }\n    busy = true; go.disabled = true; go.textContent = 'Yoxlanır…';\n    var r = null, bad = false;\n    try { r = await openRec(id + (C.pin ? ':' + pin : '')); } catch (err) { bad = true; }\n    busy = false; go.textContent = 'Nəticəni göstər'; go.disabled = false;\n    if (bad) { showMsg('err', 'Bu brauzer nəticəni aça bilmədi. Başqa brauzerlə yoxlayın.'); return; }\n    if (!r) {\n      fails++;\n      showMsg('err', 'Bu məlumatlarla nəticə tapılmadı. Nömrəni' + (C.pin ? ' və kodu' : '') + ' yoxlayın. Nəticəniz hələ yüklənməyibsə, müəllimə müraciət edin.');\n      if (fails >= 3) { lockUntil = Date.now() + Math.min(60, 5 * (fails - 2)) * 1000; tick(); }\n      return;\n    }\n    fails = 0;\n    if (!r.i) r.i = id;\n    render(r);\n  });\n  $('num').addEventListener('input', function () { this.value = this.value.replace(/\\D/g, ''); });\n  $('pin').addEventListener('input', function () { this.value = this.value.replace(/\\D/g, ''); });\n})();\n<\/script>\n<\/body>\n<\/html>\n";              // build.py şagird səhifəsinin şablonunu bura qoyur
+const NETICE_LS = 'blok_omr_netice_v1', NETICE_IT = 200000;
+const neticeUi = { busy: false, done: 0, total: 0, last: null };
+const neticeEnc = new TextEncoder();
+const neticeB64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+const neticeHex = u8 => Array.from(u8, b => (b < 16 ? '0' : '') + b.toString(16)).join('');
+const neticeCat = (a, b) => { const u = new Uint8Array(a.length + b.length); u.set(a, 0); u.set(b, a.length); return u; };
+/* şagird səhifəsindəki derive() ilə EYNİ olmalıdır */
+async function neticeDerive(secret, salt, it) {
+  const sub = crypto.subtle;
+  const km = await sub.importKey('raw', neticeEnc.encode(secret), 'PBKDF2', false, ['deriveBits']);
+  const m = new Uint8Array(await sub.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: it }, km, 256));
+  const t = new Uint8Array(await sub.digest('SHA-256', neticeCat(neticeEnc.encode('tag'), m)));
+  const k = new Uint8Array(await sub.digest('SHA-256', neticeCat(neticeEnc.encode('key'), m)));
+  return { tag: neticeHex(t.subarray(0, 8)), key: k };
+}
+/* PIN: gizli sözdən və nömrədən sabit alınır (səhifəni yenidən yaradanda eyni qalır) */
+async function neticePin(hk, id) {
+  const s = new Uint8Array(await crypto.subtle.sign('HMAC', hk, neticeEnc.encode('pin|' + id)));
+  return String((((s[0] << 24) | (s[1] << 16) | (s[2] << 8) | s[3]) >>> 0) % 10000).padStart(4, '0');
+}
+function neticeLoad() {
+  try { const o = JSON.parse(localStorage.getItem(NETICE_LS) || '{}'); return o && typeof o === 'object' && !Array.isArray(o) ? o : {}; } catch (e) { return {}; }
+}
+function neticeStore(o) { try { localStorage.setItem(NETICE_LS, JSON.stringify(o)); } catch (e) { } }
+function neticeNewSecret() {
+  const A = 'abcdefghjkmnpqrstuvwxyz23456789', r = crypto.getRandomValues(new Uint8Array(12));
+  return Array.from(r, b => A[b % A.length]).join('');
+}
+function neticeDefaults() {
+  const nm = String(state.cfg.name || '').trim(), d = nm.match(/\d+/);
+  return { title: (nm || 'İmtahan') + ' — nəticələr', file: 'netice' + (d ? '-' + d[0] : ''), pin: false, init: true, note: '' };
+}
+const neticeEligible = r => !!(r.sc.hasKey && !r.sc.langMissing && !r.hasErr && canonId(r.id));
+function neticeInitials(r) {
+  const w = r.nm && (r.nm.s || r.nm.a) ? [r.nm.s, r.nm.a] : String(r.roster || r.name || '').trim().split(/\s+/);
+  return w.filter(x => x && /\S/.test(x)).slice(0, 2).map(x => x.charAt(0).toLocaleUpperCase('az') + '.').join(' ');
+}
+/* şagirdə göstəriləcək sətir: [fənn adı, fənn balı, fənn maksimumu, [[bölmə, say/bal], …]] */
+function neticeRecord(r, id, initials) {
+  const c = state.cfg, sc = r.sc, rnd2 = v => Math.round(v * 100) / 100;
+  const subs = sc.subj.map((x, si) => {
+    const S = c.subjects[si], parts = [];
+    if (S.nC && r.p1) parts.push(['Düz', x.D], ['Yanlış', x.Y], ['Boş', x.B]);
+    if (S.nT && r.p1) parts.push(['Doğru/yanlış balı', rnd2(x.Tp)]);
+    if (S.nK && r.p2) parts.push(['Kodlu cavab (düz)', x.K]);
+    if (S.nW && r.hasW) parts.push(['Yazılı bal', rnd2(x.Wp)]);
+    if (S.nE && r.hasE) parts.push(['Esse balı', rnd2(x.Ep)]);
+    const nm = si === 0 && flOn() && (r.lang === 0 || r.lang === 1) ? S.name + ' — ' + c.fl.n[r.lang] : S.name;
+    return [nm, O.r1(x.weighted), O.r1(100 * S.coef), parts];
+  });
+  return { i: id, n: initials ? neticeInitials(r) : '', t: O.r1(sc.total), m: O.r1(100 * c.subjects.reduce((a, s) => a + s.coef, 0)), x: sc.incomplete ? 1 : 0, s: subs };
+}
+/* bütün uyğun şagirdləri şifrələyib tək HTML qurur */
+async function neticeBuild(rowsAll, o, onProg) {
+  const rows = rowsAll.filter(neticeEligible);
+  if (!rows.length) throw new Error('Səhifəyə düşəcək nəticə yoxdur');
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const hk = o.pin ? await crypto.subtle.importKey('raw', neticeEnc.encode(o.secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']) : null;
+  const items = [];
+  let next = 0, done = 0;
+  const worker = async () => {
+    for (;;) {
+      const k = next++; if (k >= rows.length) return;
+      const r = rows[k], id = canonId(r.id);
+      const pin = hk ? await neticePin(hk, id) : '';
+      const d = await neticeDerive(id + (hk ? ':' + pin : ''), salt, NETICE_IT);
+      items.push({ id, r, pin, tag: d.tag, key: d.key, plain: neticeEnc.encode(JSON.stringify(neticeRecord(r, id, o.init))) });
+      onProg(++done, rows.length);
+    }
+  };
+  await Promise.all([worker(), worker(), worker(), worker()]);
+  let maxLen = 0; for (const it of items) if (it.plain.length > maxLen) maxLen = it.plain.length;
+  const PAD = Math.max(512, Math.ceil(maxLen / 128) * 128);          // bütün sətirlər eyni uzunluqda: uzunluqdan nəticə çıxarmaq olmasın
+  const recs = {};
+  for (const it of items) {
+    if (recs[it.tag]) throw new Error('Nişan toqquşması (təkrar yaradın)');
+    const p = new Uint8Array(PAD).fill(32); p.set(it.plain);
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const key = await crypto.subtle.importKey('raw', it.key, 'AES-GCM', false, ['encrypt']);
+    const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, p));
+    recs[it.tag] = [neticeB64(iv), neticeB64(ct)];
+  }
+  const sorted = {}; for (const k of Object.keys(recs).sort()) sorted[k] = recs[k];   // sətirlərin sırası nömrələrin sırasını bildirməsin
+  const data = { v: 1, t: o.title, pin: !!o.pin, salt: neticeB64(salt), it: NETICE_IT, g: Date.now(), note: o.note || '', r: sorted };
+  const json = JSON.stringify(data).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+  const escT = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const html = NETICE_VIEW.replace('/*@TITLE@*/', () => escT(o.title)).replace('/*@DATA@*/', () => json);
+  const pins = items.slice().sort((a, b) => a.id.localeCompare(b.id)).map(it => {
+    const nm = it.r.nm || {}, full = [nm.s, nm.a, nm.p].filter(Boolean).join(' ') || it.r.roster || '';
+    return [it.id, full, nm.g || '', it.pin];
+  });
+  return { html, count: rows.length, skipped: rowsAll.length - rows.length, pins, bytes: neticeEnc.encode(html).length };
+}
+async function neticePinFile(pins, secret) {
+  const H = x => ({ v: x, s: 1 });
+  const rows = [[H('Nömrə'), H('Ad, soyad'), H('Qrup'), H('PIN')]].concat(pins);
+  rows.push([], ['Gizli söz: ' + secret], ['PIN-lər bu sözdən yaranır: eyni sözlə səhifəni yenidən yaradanda kodlar dəyişmir. Bu faylı şagirdlərə göstərməyin, hər şagirdə yalnız öz kodunu verin.']);
+  const bytes = O.buildXlsx([{ name: 'PIN siyahısı', rows, widths: [10, 30, 10, 8], header: 1 }]);
+  return saveFile(safeName(state.cfg.name) + '-PIN-siyahisi.xlsx', bytes, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+}
+/* saytın GitHub linkindən şagirdlərin açacağı ünvanı təxmin et */
+function neticeUrl(file) {
+  try {
+    if (location.protocol === 'https:' && /github\.io$/i.test(location.hostname)) return location.origin + location.pathname.replace(/[^/]*$/, '') + file + '.html';
+  } catch (e) { }
+  return '';
+}
+function neticeCard(all0) {
+  const c = state.cfg, LS = neticeLoad();
+  LS.by = LS.by && typeof LS.by === 'object' && !Array.isArray(LS.by) ? LS.by : {};
+  const cur = Object.assign(neticeDefaults(), LS.by[c.name] || {});
+  const persist = () => { LS.by[c.name] = { title: cur.title, file: cur.file, pin: cur.pin, init: cur.init, note: cur.note }; neticeStore(LS); };
+  const cnt = a => { const all = a || buildStudents(), ok = all.filter(neticeEligible); return { all, ok, skipped: all.length - ok.length, warn: ok.filter(r => r.hasWarn).length, inc: ok.filter(r => r.sc.incomplete).length }; };
+  const info = h('div', { class: 'small', style: { margin: '10px 0' } });
+  const box = h('div', { style: { marginTop: '10px' } });
+  const secretRow = h('div', { style: { margin: '8px 0 0' } });
+  const paintInfo = () => {
+    const k = cnt(all0), bits = [h('b', {}, k.ok.length + ' şagirdin'), ' nəticəsi səhifəyə düşəcək.'];
+    if (k.skipped) bits.push(' ' + k.skipped + ' şagird düşməyəcək (açar, variant, dil və ya xəta problemi: «3 · Yoxlama»-da baxın).');
+    if (k.warn) bits.push(' ' + k.warn + ' şagird «yoxlanmalı» siyahısındadır, əvvəlcə baxıb düzəldin.');
+    if (k.inc) bits.push(' ' + k.inc + ' şagirdin yazılı/esse balı hələ tam deyil (səhifədə «bal dəyişə bilər» yazılacaq).');
+    info.replaceChildren(...bits);
+  };
+  const paintSecret = () => {
+    secretRow.replaceChildren();
+    if (!cur.pin) return;
+    if (!LS.secret) { LS.secret = neticeNewSecret(); neticeStore(LS); }
+    secretRow.append(
+      h('label', { class: 'f' }, 'Gizli söz (PIN-lər buna görə yaranır; yaz və saxla)'),
+      h('input', { type: 'text', value: LS.secret, maxlength: 40, autocomplete: 'off', class: 'mono', oninput: e => { LS.secret = e.target.value.trim(); neticeStore(LS); } }),
+      h('p', { class: 'small muted', style: { margin: '4px 0 0' } }, 'Hər şagirdin 4 rəqəmli kodu bu sözdən və nömrəsindən avtomatik yaranır. Eyni sözlə səhifəni yenidən yaradanda kodlar dəyişmir; sözü dəyişsəniz bütün kodlar dəyişər. Kodları şagirdlərə özünüz verin (aşağıdakı «PIN siyahısı» Excel faylı).'));
+  };
+  const paintBox = () => {
+    box.replaceChildren();
+    if (neticeUi.busy) {
+      box.append(h('div', { class: 'bar' }, h('i', { style: { width: (neticeUi.total ? 100 * neticeUi.done / neticeUi.total : 0) + '%' } })),
+        h('div', { class: 'small muted' }, 'Şifrələnir… ' + neticeUi.done + ' / ' + neticeUi.total + ' (bir az çəkə bilər, səhifəni bağlamayın)'));
+      return;
+    }
+    const L = neticeUi.last;
+    if (!L || L.forName !== c.name) return;
+    const url = neticeUrl(L.file);
+    box.append(h('div', { class: 'note ok' },
+      h('div', {}, h('b', {}, 'Səhifə yaradıldı: '), L.file + '.html', ' (' + L.count + ' şagird, ' + Math.max(1, Math.round(L.bytes / 1024)) + ' KB).'),
+      h('ol', { class: 'small', style: { margin: '6px 0 0', paddingLeft: '20px' } },
+        h('li', {}, 'Əvvəlcə «Sınaq et» ilə bir şagirdin nömrəsini yazıb yoxlayın.'),
+        h('li', {}, 'GitHub-da saytın reposunu açın: «Add file» → «Upload files», faylı atın və «Commit changes» basın. Eyni adlı fayl varsa əvəz olunur.'),
+        h('li', {}, url ? ['Bir-iki dəqiqədən sonra şagirdlərə bu linki göndərin: ', h('a', { href: url, target: '_blank', rel: 'noopener' }, url)] : 'Şagirdlərə faylın saytdakı linkini göndərin (sayt ünvanı + / + ' + L.file + '.html).'))),
+      h('div', { class: 'row', style: { marginTop: '8px' } },
+        h('button', { class: 'btn sm', onclick: () => { const u = URL.createObjectURL(new Blob([L.html], { type: 'text/html' })); window.open(u, '_blank'); setTimeout(() => URL.revokeObjectURL(u), 120000); } }, 'Sınaq et'),
+        h('button', { class: 'btn sm', onclick: () => saveFile(L.file + '.html', L.html, 'text/html') }, 'Faylı yenidən yüklə'),
+        L.pin ? h('button', { class: 'btn sm primary', onclick: () => neticePinFile(L.pins, L.secret) }, 'PIN siyahısını yüklə (Excel)') : null));
+  };
+  const run = async () => {
+    if (neticeUi.busy) return;
+    if (!(window.crypto && crypto.subtle)) { toast('Bu brauzer şifrələməni dəstəkləmir. Saytı https ilə (GitHub linki) açın.', 7000); return; }
+    const k = cnt();
+    if (!k.ok.length) { toast('Səhifəyə düşəcək nəticə yoxdur: əvvəlcə açarı daxil edin və vərəqləri yükləyin.', 6000); return; }
+    if (cur.pin && String(LS.secret || '').length < 8) { toast('Gizli söz ən azı 8 simvol olmalıdır.', 5000); return; }
+    const file = (cur.file || '').replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '') || 'netice';
+    const title = String(cur.title || '').trim() || neticeDefaults().title;
+    neticeUi.busy = true; neticeUi.done = 0; neticeUi.total = k.ok.length; paintBox();
+    try {
+      const out = await neticeBuild(k.all, { title, pin: cur.pin, secret: LS.secret, init: cur.init, note: String(cur.note || '').trim().slice(0, 200) }, (d, t) => { neticeUi.done = d; neticeUi.total = t; paintBox(); });
+      neticeUi.last = { forName: c.name, file, html: out.html, count: out.count, bytes: out.bytes, pin: !!cur.pin, pins: out.pins, secret: LS.secret };
+      neticeUi.busy = false; paintBox();
+      if (await saveFile(file + '.html', out.html, 'text/html')) toast('Şagird səhifəsi hazırdır: ' + file + '.html', 6000);
+    } catch (e) {
+      neticeUi.busy = false; paintBox();
+      toast('Səhifə yaradılmadı: ' + (e && e.message ? e.message : 'naməlum xəta'), 8000);
+    }
+  };
+  const root = h('details', { class: 'xfer netice' },
+    h('summary', { style: { cursor: 'pointer', fontWeight: 600 } }, 'Şagirdlər üçün nəticə səhifəsi (nömrə ilə baxış)'),
+    h('p', { class: 'small muted', style: { margin: '8px 0 4px' } }, 'Şagird 5 rəqəmli nömrəsini yazıb yalnız öz balını görür (ümumi və fənn üzrə); siyahı və tam ad göstərilmir. Nəticələr şifrələnmiş tək .html faylına yazılır, onu saytın GitHub qovluğuna yükləyirsiniz.'),
+    h('p', { class: 'small muted', style: { margin: '0 0 8px' } }, 'Nəticələr yalnız bu cihazdadır, ona görə yazılı/esse balları yazılandan və ya düzəlişlərdən sonra səhifəni yenidən yaradıb eyni adla əvəz edin.'),
+    h('div', { class: 'row', style: { alignItems: 'flex-end' } },
+      h('div', { style: { flex: '2 1 240px' } }, h('label', { class: 'f' }, 'Səhifənin başlığı'),
+        h('input', { type: 'text', value: cur.title, maxlength: 120, oninput: e => { cur.title = e.target.value; persist(); } })),
+      h('div', { style: { flex: '1 1 150px' } }, h('label', { class: 'f' }, 'Fayl adı (latın hərfi, rəqəm, -)'),
+        h('input', { type: 'text', value: cur.file, maxlength: 40, autocomplete: 'off', oninput: e => { cur.file = e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-'); if (e.target.value !== cur.file) e.target.value = cur.file; persist(); } }))),
+    h('label', { style: { display: 'flex', gap: '8px', alignItems: 'flex-start', margin: '10px 0 0', cursor: 'pointer' } },
+      h('input', { type: 'checkbox', checked: cur.pin, style: { marginTop: '3px' }, onchange: e => { cur.pin = e.target.checked; persist(); paintSecret(); } }),
+      h('span', {}, h('b', {}, 'PIN tələb et'), ' — şagird nömrə ilə birlikdə 4 rəqəmli şəxsi kodu da yazır. Nömrələr ardıcıldırsa (10001, 10002…), PIN olmadan şagird dostunun nömrəsini yazıb onun balına baxa bilər.')),
+    secretRow,
+    h('label', { style: { display: 'flex', gap: '8px', alignItems: 'flex-start', margin: '10px 0 0', cursor: 'pointer' } },
+      h('input', { type: 'checkbox', checked: cur.init, style: { marginTop: '3px' }, onchange: e => { cur.init = e.target.checked; persist(); } }),
+      h('span', {}, 'Adın baş hərflərini göstər (məs., Ə. Ə.): şagird nömrəni səhv yazsa, başqasının nəticəsini öz nəticəsi sanmasın.')),
+    h('div', { style: { margin: '10px 0 0' } }, h('label', { class: 'f' }, 'Səhifənin altına qeyd (istəyə bağlı)'),
+      h('input', { type: 'text', value: cur.note, maxlength: 200, placeholder: 'məs., Sualınız varsa müəllimə müraciət edin.', oninput: e => { cur.note = e.target.value; persist(); } })),
+    info,
+    h('div', { class: 'row' }, h('button', { class: 'btn primary', onclick: run }, 'Şagird səhifəsini yarat')),
+    box);
+  paintInfo(); paintSecret(); paintBox();
+  return root;
+}
+
 /* =====================  4 · NƏTİCƏLƏR  ===================== */
 function viewResults() {
   const c = state.cfg;
@@ -2909,6 +3112,7 @@ function viewResults() {
   root.append(h('details', { class: 'xfer' }, h('summary', { style: { cursor: 'pointer', fontWeight: 600 } }, 'Başqa cihazda (məs., kompüterdə) aç'),
     h('p', { class: 'small muted', style: { margin: '8px 0 8px' } }, 'Telefonda yoxladınız, kompüterdə görmək istəyirsiniz? «Başqa cihaza göndər» bütün nəticələri (şəkillərsiz) bir fayl kimi Telegram, WhatsApp, e-poçt və s. ilə özünüzə göndərir. Kompüterdə saytı açıb «Gələn faylı aç» düyməsini basın və faylı seçin.'),
     h('div', { class: 'row' }, h('button', { class: 'btn', onclick: shareProject }, 'Başqa cihaza göndər'), h('button', { class: 'btn', onclick: () => xferIn.click() }, 'Gələn faylı aç'), xferIn)));
+  root.append(neticeCard(all));
   const q = h('input', { type: 'text', placeholder: 'Nömrə və ya ad axtar…', value: state.res.q, style: { maxWidth: '240px' }, oninput: e => { state.res.q = e.target.value; paintTable(); } });
   const tblHold = h('div');
   const cmp = {

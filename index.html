@@ -166,6 +166,14 @@ select.adj.on{border-color:#7a5bd0;background:#f1ecfd;color:#3b2a86;font-weight:
 td.nmcell{white-space:normal;min-width:110px;font-size:13px}
 .nmnav{margin-top:8px;justify-content:space-between}
 .nmnav .nmpos{min-width:60px;text-align:center}
+/* telefon üçün qısa nəticə cədvəli */
+table.t.cmp th{vertical-align:bottom;line-height:1.2}
+table.t.cmp th.subj{min-width:64px;white-space:normal}
+table.t.cmp td.nmcell{white-space:normal;min-width:84px}
+table.t.cmp td.tot{font-size:15px}
+table.t.cmp .tsub{font-weight:400;font-size:11px;line-height:1.15;white-space:nowrap}
+.xfer{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:10px 14px}   /* «details.card» deyil: sual təhlili ilə qarışmasın */
+.xfer summary{font-size:14px}
 
 </style>
 </head>
@@ -1567,11 +1575,42 @@ async function saveFile(name, data, mime) {
   return true;
 }
 
+/* ---------- layihə faylı: yazmaq / başqa cihaza göndərmək / açmaq ---------- */
+const projectObj = () => ({ cfg: state.cfg, scans: state.scans, manual: state.manual, manualV: 2, essay: state.essay, adj: state.adj, names: state.names });
+/* telefonda «Paylaş» pəncərəsi (Telegram, WhatsApp, e-poçt…) açılır; dəstəklənmirsə fayl yüklənir. .json bəzi telefonlarda paylaşıla bilmir, ona görə .txt ehtiyatı da var: idxal faylın adına yox, məzmununa baxır */
+async function shareProject() {
+  const text = JSON.stringify(projectObj()), base = safeName(state.cfg.name) + '-layihe';
+  try {
+    if (navigator.canShare && navigator.share && typeof File === 'function') {
+      for (const [ext, type] of [['.json', 'application/json'], ['.txt', 'text/plain']]) {
+        const f = new File([text], base + ext, { type });
+        if (navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], title: 'İmtahan nəticələri' }); return; }
+      }
+    }
+  } catch (e) { if (e && e.name === 'AbortError') return; }
+  if (await saveFile(base + '.json', text, 'application/json')) toast('Fayl yükləndi. Onu özünüzə göndərib kompüterdə «Gələn faylı aç» düyməsi ilə açın.', 7000);
+}
+async function importProjectFile(f, ask) {
+  let j;
+  try { j = JSON.parse(await f.text()); } catch (err) { toast('Fayl oxunmadı: bu saytın layihə faylı (.json və ya .txt) olmalıdır'); return; }
+  try {
+    if (!j || typeof j !== 'object') throw new Error('format');
+    const hasData = state.scans.length || Object.keys(state.manual).length || Object.keys(state.essay).length || Object.keys(state.names).length;
+    if (ask && Array.isArray(j.scans) && hasData && !(await askConfirm('Bu cihazdakı oxunmuş vərəqlər və ballar faylın məzmunu ilə əvəz olunacaq. Davam edək?', 'Bəli, əvəz et'))) return;
+    const ncfg = O.normalizeCfg(j.cfg || j);
+    const same = O.sigOf(ncfg) === O.sigOf(state.cfg);
+    state.cfg = ncfg; fitAllKeys();
+    if (j.scans) { state.scans = j.scans; normScans(); state.manual = cleanManual(j.manual, j.manualV); state.essay = cleanEssay(j.essay); state.adj = cleanAdj(j.adj); state.names = cleanNames(j.names); markDuplicates(); }
+    else if (!same) { state.scans = []; state.manual = {}; state.essay = {}; state.adj = {}; }
+    save(); renderAll(); toast(ask && j.scans ? 'Fayl açıldı: ' + state.scans.length + ' vərəq yükləndi' : 'Quraşdırma yükləndi');
+  } catch (err) { toast('Fayl oxunmadı'); }
+}
+
 /* ---------- vəziyyət ---------- */
 const state = {
   cfg: O.normalizeCfg({}), scans: [], manual: {}, essay: {}, adj: {}, names: {}, tab: 'setup', keyVariant: 'A', keyMsg: null, keyPending: null,
   chk: { problemOnly: false },
-  res: { q: '', sort: 'id', dir: 1 }
+  res: { q: '', sort: 'id', dir: 1, compact: null }
 };
 const thumbs = new Map();
 const IDB = (() => {
@@ -1838,9 +1877,11 @@ function markDuplicates() {
 function notInRoster(id) { const r = state.cfg.roster; return Object.keys(r).length > 0 && !r[normId(id)]; }
 const MSG_CONFLICT = 'Bu nömrə ilə fərqli cavablı başqa vərəq də var: nömrə səhv işarələnmiş ola bilər. Hansının düzgün olduğuna baxıb yanlışını silin (sonuncu yüklənən götürülür).';
 const MSG_ROSTER = 'Nömrə şagird siyahısında yoxdur: nömrə səhv işarələnmiş ola bilər.';
+const MSG_NOID = 'Nömrəsiz vərəq nəticələrdə görünmür: «Bax / düzəlt» düyməsi ilə 5 rəqəmli şagird nömrəsini yazın.';
 function scanNotes(sc) {
   if (!sc.ok) return [sc.err];
   const n = [];
+  if (!sc.dup && !sc.id) n.push(MSG_NOID);
   if (sc.conflict && !sc.reviewed) n.push(MSG_CONFLICT);
   if (!sc.dup && sc.id && notInRoster(sc.id) && !sc.reviewed) n.push(MSG_ROSTER);
   if (!sc.reviewed) for (const f of sc.flags || []) n.push(f.m);
@@ -1890,7 +1931,7 @@ function structText(c) {
 }
 function fitAllKeys() { const c = state.cfg; for (const v of Object.keys(c.keys)) c.keys[v] = O.fitKey(c.keys[v], c); }
 function clearScanData() {
-  state.scans = []; state.manual = {}; state.essay = {}; state.adj = {};
+  state.scans = []; state.manual = {}; state.essay = {}; state.adj = {}; skipW = [];
   for (const u of thumbs.values()) { try { URL.revokeObjectURL(u); } catch (e) { } }
   thumbs.clear(); IDB.clear();
 }
@@ -2094,23 +2135,15 @@ function viewSetup() {
     h('p', { class: 'sub' }, 'Nömrələrə uyğun adlar nəticələrdə görünsün deyə. Excel-dən iki sütunu (nömrə, ad) kopyalayıb yapışdıra bilərsiniz.'), ta, rcount));
 
   // saxla/yüklə
-  const cfgFile = h('input', { type: 'file', accept: '.json,application/json', class: 'hide', onchange: async e => {
+  const cfgFile = h('input', { type: 'file', accept: '.json,.txt,application/json,text/plain', class: 'hide', onchange: async e => {
     const f = e.target.files[0]; e.target.value = ''; if (!f) return;
-    try {
-      const j = JSON.parse(await f.text());
-      const ncfg = O.normalizeCfg(j.cfg || j);
-      const same = O.sigOf(ncfg) === O.sigOf(state.cfg);
-      state.cfg = ncfg; fitAllKeys();
-      if (j.scans) { state.scans = j.scans; normScans(); state.manual = cleanManual(j.manual, j.manualV); state.essay = cleanEssay(j.essay); state.adj = cleanAdj(j.adj); state.names = cleanNames(j.names); markDuplicates(); }
-      else if (!same) { state.scans = []; state.manual = {}; state.essay = {}; state.adj = {}; }
-      save(); renderAll(); toast('Quraşdırma yükləndi');
-    } catch (err) { toast('Fayl oxunmadı'); }
+    await importProjectFile(f, false);
   } });
   const linkBox = h('div', { class: 'linkbox' });
   root.append(h('div', { class: 'card' }, h('h2', {}, 'Saxla / yüklə'),
     h('p', { class: 'sub' }, 'Quraşdırma və nəticələr bu cihazın brauzerində avtomatik saxlanır, amma brauzer yaddaşı təmizlənərsə və ya başqa cihaza keçsəniz itə bilər. İmtahan bitəndən sonra Excel faylını və bu .json ehtiyat faylını mütləq yükləyin.'),
     h('div', { class: 'row' },
-      h('button', { class: 'btn', onclick: () => saveFile(safeName(c.name) + '-layihe.json', JSON.stringify({ cfg: state.cfg, scans: state.scans, manual: state.manual, manualV: 2, essay: state.essay, adj: state.adj, names: state.names }), 'application/json') }, 'Hamısını fayla yaz (.json)'),
+      h('button', { class: 'btn', onclick: () => saveFile(safeName(c.name) + '-layihe.json', JSON.stringify(projectObj()), 'application/json') }, 'Hamısını fayla yaz (.json)'),
       h('button', { class: 'btn', onclick: () => cfgFile.click() }, 'Fayldan yüklə'), cfgFile,
       dlCap ? null : h('button', { class: 'btn', onclick: () => showKeyLink(linkBox) }, 'Açar linki yarat')),
     linkBox,
@@ -2257,16 +2290,17 @@ function viewCheck() {
   drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); processFiles([...e.dataTransfer.files].filter(f => /^image\//.test(f.type) || /\.(jpe?g|png|webp)$/i.test(f.name))); });
   root.append(h('div', { class: 'card' }, h('h2', {}, 'Doldurulmuş vərəqlər'), drop,
     h('p', { class: 'small muted', style: { margin: '10px 0 0' } }, 'Şəkil çəkərkən: vərəq düz stolda olsun, işıqlı yerdə, kölgə düşmədən; telefonu vərəqin üstündən düz tutun; vərəqin 4 küncündəki və kənarlardakı qara kvadratlar tam görünsün. 1-ci və 2-ci səhifələri istənilən sırada yükləyə bilərsiniz: sayt onları şagird nömrəsinə görə birləşdirir.' + (wbPages() ? ' Yazı səhifələrini (' + wbRange() + ') çəkmək lazım deyil: səhvən yükləsəniz, sayt onları tanıyıb keçir.' : ''))));
-  ui.check = { prog: h('div', { class: 'card hide' }), summary: h('div', { class: 'cards3' }), table: h('div', {}), };
-  root.append(ui.check.prog, h('div', { class: 'card' }, h('h2', {}, 'Oxunan şəkillər'), ui.check.summary,
+  ui.check = { prog: h('div', { class: 'card hide' }), summary: h('div', { class: 'cards3' }), skip: h('div', {}), table: h('div', {}), };
+  root.append(ui.check.prog, h('div', { class: 'card' }, h('h2', {}, 'Oxunan şəkillər'), ui.check.summary, ui.check.skip,
     h('p', { class: 'small muted', style: { margin: '8px 0 0' } }, 'Şagirdin soyadını, adını, ata adını və qrupunu «Bax / düzəlt» pəncərəsində yazın: nəticələrdə və Excel-də görünəcək.'),
     h('div', { class: 'row', style: { margin: '12px 0 8px' } },
       h('label', { class: 'row small', style: { gap: '6px' } }, h('input', { type: 'checkbox', checked: state.chk.problemOnly, onchange: e => { state.chk.problemOnly = e.target.checked; refreshCheck(); } }), 'Yalnız diqqət tələb edənlər'),
-      h('button', { class: 'btn sm danger', onclick: async () => { if (state.scans.length && await askConfirm('Bütün oxunmuş şəkillərin nəticələri silinsin?' + (Object.keys(state.manual).length || Object.keys(state.essay).length ? ' (Əl ilə daxil etdiyiniz yazılı' + (eTotal() ? ' və esse' : '') + ' ballar qalacaq.)' : '') + (Object.keys(state.names).length ? ' Yazdığınız ad-soyadlar da qalacaq.' : ''), 'Hamısını sil')) { state.scans = []; for (const u of thumbs.values()) { try { URL.revokeObjectURL(u); } catch (e) { } } thumbs.clear(); IDB.clear(); save(); refreshCheck(); } } }, 'Hamısını təmizlə')),
+      h('button', { class: 'btn sm danger', onclick: async () => { if (state.scans.length && await askConfirm('Bütün oxunmuş şəkillərin nəticələri silinsin?' + (Object.keys(state.manual).length || Object.keys(state.essay).length ? ' (Əl ilə daxil etdiyiniz yazılı' + (eTotal() ? ' və esse' : '') + ' ballar qalacaq.)' : '') + (Object.keys(state.names).length ? ' Yazdığınız ad-soyadlar da qalacaq.' : ''), 'Hamısını sil')) { state.scans = []; skipW = []; for (const u of thumbs.values()) { try { URL.revokeObjectURL(u); } catch (e) { } } thumbs.clear(); IDB.clear(); save(); refreshCheck(); } } }, 'Hamısını təmizlə')),
     ui.check.table));
   return root;
 }
 const prog = { run: false, done: 0, total: 0, cur: '' };
+let skipW = [];      // bu sessiyada «yazı səhifəsi» kimi tanınıb keçilən faylların adları: səssizcə yox olmasın
 function refreshCheck() {
   const U = ui.check; if (!U || !U.table.isConnected && !document.contains(U.table)) { }
   if (!U) return;
@@ -2281,6 +2315,8 @@ function refreshCheck() {
   const ok = sc.filter(s => s.ok && !s.dup && s.id);
   const students = new Set(ok.map(s => s.id)).size;
   const probs = sc.filter(s => { const t = scanStatus(s); return t.cls === 'err' || t.cls === 'warn'; }).length;
+  U.skip.innerHTML = '';
+  if (skipW.length) U.skip.append(h('div', { class: 'note small skipwr', style: { marginTop: '8px' } }, 'Yazı səhifəsi kimi tanınıb keçildi (' + skipW.length + ' şəkil): ' + skipW.slice(-8).join(', ') + (skipW.length > 8 ? ' …' : '') + '. Yazı səhifələri saytda oxunmur və siyahıya düşmür. Şagirdin cavab səhifələrini (1-ci' + (hasCoded() ? ' və 2-ci' : '') + ' səhifə) yükləyin.'));
   U.summary.innerHTML = '';
   for (const [n, l] of [[sc.length, 'şəkil'], [students, 'şagird'], [ok.filter(s => s.page === 1).length, '1-ci səhifə']].concat(hasCoded() ? [[ok.filter(s => s.page === 2).length, '2-ci səhifə']] : [], [[probs, 'diqqət tələb edir']]))
     U.summary.append(h('div', { class: 'kpi' }, h('b', {}, n), h('span', {}, l)));
@@ -2318,7 +2354,7 @@ async function processFiles(files) {
       const img = await O.loadGray(f, 3000);
       const res = O.readSheet(img, state.cfg, { rectify: 3 });
       if (!res.ok) rec = { uid, file: f.name, ts: Date.now(), ok: false, err: res.err, flags: [] };
-      else if (res.write) { rec = null; nWrite++; }      // yazı səhifəsi: oxunmur, siyahıya düşmür
+      else if (res.write) { rec = null; nWrite++; skipW.push(f.name); }      // yazı səhifəsi: oxunmur, siyahıya düşmür
       else {
         rec = { uid, file: f.name, ts: Date.now(), ok: true, page: res.page, id: res.id, variant: res.variant,
           closed: res.closed, tf: res.tf, written: res.written, cc: res.cc, scoresW: res.scoresW || null, scoresE: res.scoresE || null, flags: res.flags, scale: res.scale };
@@ -2434,9 +2470,12 @@ function openEditor(uid) {
   form.append(h('div', { class: 'row' }, h('div', {}, h('label', { class: 'f' }, 'Şagird nömrəsi'), idI), h('div', {}, h('label', { class: 'f' }, 'Variant'), varS),
     langS ? h('div', {}, h('label', { class: 'f' }, 'Xarici dil'), langS) : null,
     h('div', { style: { marginLeft: 'auto' } }, pill)));
+  const noIdNote = h('div', { class: 'note err small noidnote' }, 'Şagird nömrəsi yoxdur: yuxarıdakı xanaya 5 rəqəmli nömrəni yazın. Yazmasanız, bu vərəq «4 · Nəticələr» bölməsində görünməyəcək.');
+  form.append(noIdNote);
   if ((sc.flags || []).length) form.append(h('div', { class: 'note warn small' }, sc.flags.map(f => h('div', {}, '• ' + f.m))));
   const paints = [];
   function paintAll() { paints.forEach(f => f()); }
+  paints.push(() => { noIdNote.classList.toggle('hide', !!sc.id || !!sc.dup); });
   /* soyadı, adı, ata adı, qrup: vərəqin yuxarısındakı əllə yazıya baxıb yazılır; şagirdin hər iki səhifəsi üçün eynidir (nömrəyə bağlıdır) */
   const nameDefs = [['s', 'Soyadı', '1 1 140px'], ['a', 'Adı', '1 1 120px'], ['p', 'Ata adı', '1 1 140px'], ['g', 'Qrup', '0 1 84px']];
   const nameEls = nameDefs.map(([f, lb, flex], i) => {
@@ -2602,7 +2641,7 @@ function openEditor(uid) {
     if (O.scoreBlock2(c)) appendScoreCards();
   }
   const nxt = nextProblemUid(sc.uid);
-  const finish = (go) => { sc.reviewed = true; dirty = true; save(); markDuplicates(); closeModal(); if (go) openEditor(go); };
+  const finish = (go) => { sc.reviewed = true; dirty = true; save(); markDuplicates(); const noId = !sc.id && !sc.dup; closeModal(); if (noId) toast('Nömrə yazılmadığı üçün bu vərəq nəticələrdə görünməyəcək', 5000); if (go) openEditor(go); };
   form.append(h('div', { class: 'row' },
     nxt ? h('button', { class: 'btn primary', onclick: () => finish(nxt) }, 'Təsdiq et və növbəti problemli vərəq →') : null,
     h('button', { class: nxt ? 'btn' : 'btn primary', onclick: () => finish(null) }, 'Təsdiq et və bağla'),
@@ -2838,6 +2877,17 @@ function viewResults() {
   const c = state.cfg;
   const all = buildStudents();
   const root = h('div', { class: 'stack' });
+  /* cədvələ düşməyən vərəqlər: nömrəsi oxunmayan (id yoxdur) və ya heç oxunmayan şəkillər: səbəbsiz «yoxa çıxmasın» */
+  const noIdScans = state.scans.filter(s => s.ok && !s.dup && !s.id), badScans = state.scans.filter(s => !s.ok);
+  if (noIdScans.length || badScans.length) {
+    root.append(h('div', { class: 'note warn skipnote' },
+      h('b', {}, 'Bəzi vərəqlər aşağıdakı cədvəldə göstərilmir.'),
+      noIdScans.length ? h('div', { style: { marginTop: '4px' } }, 'Şagird nömrəsi oxunmayan vərəq: ' + noIdScans.length + '. Nömrəsi olmayan vərəq nəticələrə düşmür. «Nömrəsiz vərəqi aç» düyməsini basıb 5 rəqəmli nömrəni yazın: şagird dərhal cədvəldə görünəcək.') : null,
+      badScans.length ? h('div', { style: { marginTop: '4px' } }, 'Heç oxunmayan şəkil: ' + badScans.length + '. Səbəbi «3 · Yoxlama» bölməsində yazılıb; vərəqi işıqlı yerdə, düz tutub yenidən çəkin.') : null,
+      h('div', { class: 'row', style: { marginTop: '8px' } },
+        noIdScans.length ? h('button', { class: 'btn sm primary', onclick: () => openEditor(noIdScans[noIdScans.length - 1].uid) }, 'Nömrəsiz vərəqi aç') : null,
+        h('button', { class: 'btn sm', onclick: () => setTab('check') }, '«3 · Yoxlama»-ya keç'))));
+  }
   const totals = all.filter(s => s.sc.hasKey).map(s => s.sc.total);
   const avg = totals.length ? totals.reduce((a, b) => a + b, 0) / totals.length : null;
   const maxTot = 100 * c.subjects.reduce((a, s) => a + s.coef, 0);
@@ -2851,6 +2901,14 @@ function viewResults() {
     hasW || hasE ? h('div', { class: 'kpi' }, h('b', {}, all.filter(s => s.sc.incomplete).length), h('span', {}, (hasW ? (hasE ? 'yazılı/esse balı' : 'yazılı balı') : 'esse balı') + ' tam deyil')) : null));
   const needKey = filledVariants().length === 0;
   if (needKey) root.append(h('div', { class: 'note warn' }, 'Açar daxil edilməyib: «1 · İmtahan» bölməsində düzgün cavabları yazın və ya açar vərəqinin şəklini oxudun. Bundan sonra ballar avtomatik hesablanacaq.'));
+  const noKeyN = needKey ? 0 : all.filter(s => !s.sc.hasKey).length;
+  if (noKeyN) root.append(h('div', { class: 'note warn nokeynote' }, noKeyN + ' şagirdin balı hesablanmayıb: variantı oxunmayıb və ya həmin variantın açarı daxil edilməyib. «1 · İmtahan» bölməsində açarı yazın, ya da sətrə basıb («Bax / düzəlt») variantı seçin.'));
+  /* telefonda geniş cədvəl sağa sürüşdürülür və «Cəmi» bal görünmür: dar ekranda qısa cədvəl (Cəmi bal 3-cü sütunda) */
+  const compact = state.res.compact == null ? !!(window.matchMedia && window.matchMedia('(max-width: 720px)').matches) : !!state.res.compact;
+  const xferIn = h('input', { type: 'file', accept: '.json,.txt,application/json,text/plain', class: 'hide', onchange: async e => { const f = e.target.files[0]; e.target.value = ''; if (f) await importProjectFile(f, true); } });
+  root.append(h('details', { class: 'xfer' }, h('summary', { style: { cursor: 'pointer', fontWeight: 600 } }, 'Başqa cihazda (məs., kompüterdə) aç'),
+    h('p', { class: 'small muted', style: { margin: '8px 0 8px' } }, 'Telefonda yoxladınız, kompüterdə görmək istəyirsiniz? «Başqa cihaza göndər» bütün nəticələri (şəkillərsiz) bir fayl kimi Telegram, WhatsApp, e-poçt və s. ilə özünüzə göndərir. Kompüterdə saytı açıb «Gələn faylı aç» düyməsini basın və faylı seçin.'),
+    h('div', { class: 'row' }, h('button', { class: 'btn', onclick: shareProject }, 'Başqa cihaza göndər'), h('button', { class: 'btn', onclick: () => xferIn.click() }, 'Gələn faylı aç'), xferIn)));
   const q = h('input', { type: 'text', placeholder: 'Nömrə və ya ad axtar…', value: state.res.q, style: { maxWidth: '240px' }, oninput: e => { state.res.q = e.target.value; paintTable(); } });
   const tblHold = h('div');
   const cmp = {
@@ -2858,12 +2916,38 @@ function viewResults() {
     prob: (a, b) => (b.hasErr * 2 + b.hasWarn) - (a.hasErr * 2 + a.hasWarn),
   };
   for (let s = 0; s < NS; s++) cmp['s' + s] = (a, b) => a.sc.subj[s].weighted - b.sc.subj[s].weighted;
+  const statusTd = r => {
+    const stCls = r.hasErr ? 'err' : r.hasWarn ? 'warn' : 'ok';
+    return h('td', { title: r.issues.map(i => i.m).join('\n') }, h('span', { class: 'pill ' + stCls }, r.hasErr ? 'Yoxla' : r.hasWarn ? 'Diqqət' : 'OK'), r.sc.incomplete ? h('span', { class: 'small muted' }, (r.sc.subj.some(x => x.wMissing) ? ' yazılı?' : '') + (r.sc.subj.some(x => x.eMissing) ? ' esse?' : '') + (r.sc.langMissing ? ' dil?' : '')) : null,
+        r.sc.adjN ? h('span', { class: 'small adjmark', title: 'Əllə bal düzəlişi: ' + adjSummary(canonId(r.id)) }, ' ✎' + r.sc.adjN) : null);
+  };
+  const sheetTd = r => h('td', {}, r.p1 ? h('button', { class: 'btn sm', onclick: () => openEditor(r.p1.uid) }, '1') : null, ' ', r.p2 ? h('button', { class: 'btn sm', onclick: () => openEditor(r.p2.uid) }, '2') : null);
   function paintTable() {
     let rows = all.slice();
     const qq = state.res.q.trim();
     if (qq) { const fq = fold(qq); rows = rows.filter(r => r.id.includes(qq) || fold([r.name, r.roster, r.nm.g].join(' ')).includes(fq)); }
     rows.sort((a, b) => state.res.dir * cmp[state.res.sort](a, b));
-    const th = (k, label, cls) => h('th', { class: 'sortable ' + (cls || ''), rowspan: 2, onclick: () => { if (state.res.sort === k) state.res.dir *= -1; else { state.res.sort = k; state.res.dir = (k === 'total' || k.startsWith('s')) ? -1 : 1; } paintTable(); } }, label + (state.res.sort === k ? (state.res.dir > 0 ? ' ▲' : ' ▼') : ''));
+    const th = (k, label, cls, rs) => h('th', { class: 'sortable ' + (cls || ''), rowspan: rs || 2, onclick: () => { if (state.res.sort === k) state.res.dir *= -1; else { state.res.sort = k; state.res.dir = (k === 'total' || k.startsWith('s')) ? -1 : 1; } paintTable(); } }, label + (state.res.sort === k ? (state.res.dir > 0 ? ' ▲' : ' ▼') : ''));
+    const emptyMsg = () => h('p', { class: 'muted' }, all.length ? 'Axtarışa uyğun şagird yoxdur.' : (noIdScans.length || badScans.length) ? 'Şəkillər yüklənib, amma hələ heç biri nəticəyə düşməyib: nömrəsi oxunmayıb və ya şəkil oxunmayıb (yuxarıdakı xəbərdarlığa baxın).' : 'Hələ nəticə yoxdur. «Yoxlama» bölməsində şəkilləri yükləyin.');
+    if (compact) {
+      const hd = h('tr', {}, th('id', 'Nömrə', '', 1), th('name', 'Ad', '', 1), th('total', 'Cəmi', 'n', 1), h('th', {}, 'Var.'), flOn() ? h('th', { title: 'Şagirdin vərəqdə seçdiyi xarici dil' }, 'Dil') : null);
+      c.subjects.forEach((S, si) => hd.append(th('s' + si, S.name, 'n subj', 1)));
+      hd.append(th('prob', 'Vəziyyət', '', 1), h('th', {}, 'Vərəq'));
+      const tbc = h('tbody');
+      for (const r of rows) {
+        const noK = !r.sc.hasKey;
+        const tr = h('tr', { class: 'clk', onclick: e => { if (e.target.closest('button')) return; if (r.p1 || r.p2) openEditor((r.p1 || r.p2).uid); else openWritten(); } },
+          h('td', {}, r.id), h('td', { class: 'nmcell' }, r.name, r.nm.g ? h('span', { class: 'small muted' }, ' · ' + r.nm.g) : null),
+          h('td', { class: 'n tot' }, noK ? '—' : fmt(r.sc.total), noK ? h('div', { class: 'small muted tsub' }, r.variant ? 'açar yoxdur' : 'variant yoxdur') : r.sc.incomplete ? h('div', { class: 'small muted tsub' }, 'hələlik') : null),
+          h('td', {}, r.variant || '—'), flOn() ? h('td', {}, flName(r.lang)) : null);
+        r.sc.subj.forEach(x => tr.append(h('td', { class: 'n' }, r.sc.hasKey ? fmt(x.weighted) : '—')));
+        tr.append(statusTd(r), sheetTd(r));
+        tbc.append(tr);
+      }
+      tblHold.innerHTML = '';
+      tblHold.append(rows.length ? h('div', { class: 'tblwrap' }, h('table', { class: 't cmp' }, h('thead', {}, hd), tbc)) : emptyMsg());
+      return;
+    }
     const h1 = h('tr', {}, th('id', 'Nömrə'), th('name', 'Ad'), h('th', { rowspan: 2 }, 'Var.'), flOn() ? h('th', { rowspan: 2, title: 'Şagirdin vərəqdə seçdiyi xarici dil' }, 'Dil') : null);
     const h2 = h('tr', {});
     for (let s = 0; s < NS; s++) {
@@ -2880,22 +2964,20 @@ function viewResults() {
         tr.append(h('td', { class: 'n gl' }, r.p1 && S.rows ? fmtW(x.D + x.Tp) : '—'), h('td', { class: 'n' }, r.p1 && S.nC ? x.Y : '—'), h('td', { class: 'n' }, r.p2 && S.nK ? x.K : '—'), h('td', { class: 'n' }, (r.hasW && S.nW) || (r.hasE && S.nE) ? fmtW(x.Wp + x.Ep) : '—'),
           h('td', { class: 'n', style: { fontWeight: 600 } }, r.sc.hasKey ? fmt(x.weighted) : '—'));
       });
-      const stCls = r.hasErr ? 'err' : r.hasWarn ? 'warn' : 'ok';
-      tr.append(h('td', { class: 'n tot gl' }, r.sc.hasKey ? fmt(r.sc.total) : '—'),
-        h('td', { title: r.issues.map(i => i.m).join('\n') }, h('span', { class: 'pill ' + stCls }, r.hasErr ? 'Yoxla' : r.hasWarn ? 'Diqqət' : 'OK'), r.sc.incomplete ? h('span', { class: 'small muted' }, (r.sc.subj.some(x => x.wMissing) ? ' yazılı?' : '') + (r.sc.subj.some(x => x.eMissing) ? ' esse?' : '') + (r.sc.langMissing ? ' dil?' : '')) : null,
-        r.sc.adjN ? h('span', { class: 'small adjmark', title: 'Əllə bal düzəlişi: ' + adjSummary(canonId(r.id)) }, ' ✎' + r.sc.adjN) : null),
-        h('td', {}, r.p1 ? h('button', { class: 'btn sm', onclick: () => openEditor(r.p1.uid) }, '1') : null, ' ', r.p2 ? h('button', { class: 'btn sm', onclick: () => openEditor(r.p2.uid) }, '2') : null));
+      tr.append(h('td', { class: 'n tot gl' }, r.sc.hasKey ? fmt(r.sc.total) : '—'), statusTd(r), sheetTd(r));
       tb.append(tr);
     }
     tblHold.innerHTML = '';
-    tblHold.append(rows.length ? h('div', { class: 'tblwrap' }, h('table', { class: 't' }, h('thead', {}, h1, h2), tb)) : h('p', { class: 'muted' }, all.length ? 'Axtarışa uyğun şagird yoxdur.' : 'Hələ nəticə yoxdur. «Yoxlama» bölməsində şəkilləri yükləyin.'));
+    tblHold.append(rows.length ? h('div', { class: 'tblwrap' }, h('table', { class: 't' }, h('thead', {}, h1, h2), tb)) : emptyMsg());
   }
   root.append(h('div', { class: 'card' },
     h('div', { class: 'row', style: { marginBottom: '10px' } }, h('h2', { style: { margin: 0 } }, 'Şagirdlərin balları'), q,
       h('div', { style: { marginLeft: 'auto' }, class: 'row' },
         hasW || hasE ? h('button', { class: 'btn primary', onclick: openWritten }, handLabel()) : null,
-        h('button', { class: 'btn', onclick: () => exportXlsx(all) }, 'Excel yüklə (.xlsx)'))),
-    h('p', { class: 'small muted', style: { margin: '0 0 8px' } }, 'Düz/Yan. qapalı cavablardır (' + (c.penalty ? 'Y 4-ə bölünüb düzlərdən çıxılır' : 'yanlış cavab bal aparmır') + (tTotal() ? '; Düz-ə doğru/yanlış tapşırıqlarının balı da əlavə olunur: 4 düz bənd = 1, 3 düz bənd = ½' : '') + '), Kod: düz kodlaşdırılan cavab sayı, Yaz.: ' + (wTotal() ? 'yazılı tapşırıqların xalı (markerin balı × 2, müəllim verir)' : '') + (wTotal() && eTotal() ? ' və ' : '') + (eTotal() ? 'esse balı (müəllim verir)' : '') + (wTotal() || eTotal() ? '' : 'yazılı tapşırıqların xalı') + ', Bal: fənnin nisbi balı (0–100) əmsala vurulmuş. Sətrə basıb vərəqə baxa və düzəliş edə bilərsiniz.'),
+        h('button', { class: 'btn', onclick: () => exportXlsx(all) }, 'Excel yüklə (.xlsx)'),
+        h('button', { class: 'btn', 'data-view': compact ? 'full' : 'short', onclick: () => { state.res.compact = !compact; renderAll(); } }, compact ? 'Ətraflı cədvəl' : 'Qısa cədvəl'))),
+    hasW || hasE ? (compact ? null : h('p', { class: 'small muted partnote', style: { margin: '0 0 8px' } }, 'Cəmi bal yazılı və esse balı olmadan da göstərilir («hələlik» = bu ballar hələ daxil edilməyib). «' + handLabel() + '» düyməsi ilə yazdıqca bal yenilənir.')) : null,
+    compact ? h('p', { class: 'small muted', style: { margin: '0 0 8px' } }, (hasW || hasE ? 'Cəmi bal yazılı və esse balı olmadan da göstərilir («hələlik» = bu ballar hələ daxil edilməyib); «' + handLabel() + '» ilə yazdıqca yenilənir. ' : '') + 'Sətrə basıb vərəqə baxa bilərsiniz. Düz/Yan./Kod/Yaz. sütunları üçün «Ətraflı cədvəl» düyməsini basın.') : h('p', { class: 'small muted', style: { margin: '0 0 8px' } }, 'Düz/Yan. qapalı cavablardır (' + (c.penalty ? 'Y 4-ə bölünüb düzlərdən çıxılır' : 'yanlış cavab bal aparmır') + (tTotal() ? '; Düz-ə doğru/yanlış tapşırıqlarının balı da əlavə olunur: 4 düz bənd = 1, 3 düz bənd = ½' : '') + '), Kod: düz kodlaşdırılan cavab sayı, Yaz.: ' + (wTotal() ? 'yazılı tapşırıqların xalı (markerin balı × 2, müəllim verir)' : '') + (wTotal() && eTotal() ? ' və ' : '') + (eTotal() ? 'esse balı (müəllim verir)' : '') + (wTotal() || eTotal() ? '' : 'yazılı tapşırıqların xalı') + ', Bal: fənnin nisbi balı (0–100) əmsala vurulmuş. Sətrə basıb vərəqə baxa və düzəliş edə bilərsiniz.'),
     tblHold));
   paintTable();
   root.append(itemAnalysis(all));

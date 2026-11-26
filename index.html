@@ -166,12 +166,18 @@ select.adj.on{border-color:#7a5bd0;background:#f1ecfd;color:#3b2a86;font-weight:
 td.nmcell{white-space:normal;min-width:110px;font-size:13px}
 .nmnav{margin-top:8px;justify-content:space-between}
 .nmnav .nmpos{min-width:60px;text-align:center}
-/* telefon üçün qısa nəticə cədvəli */
+/* telefon üçün qısa nəticə cədvəli: sütunlar ekrana sığır, ad sətirə bölünür */
+table.t.cmp{table-layout:fixed;width:100%}
+table.t.cmp col.c-id{width:60px}
+table.t.cmp col.c-tot{width:64px}
+table.t.cmp col.c-st{width:68px}
+table.t.cmp th,table.t.cmp td{padding:7px 6px;white-space:normal;overflow-wrap:anywhere}
 table.t.cmp th{vertical-align:bottom;line-height:1.2}
-table.t.cmp th.subj{min-width:64px;white-space:normal}
-table.t.cmp td.nmcell{white-space:normal;min-width:84px}
+table.t.cmp td.nmcell{font-size:13px}
 table.t.cmp td.tot{font-size:15px}
-table.t.cmp .tsub{font-weight:400;font-size:11px;line-height:1.15;white-space:nowrap}
+table.t.cmp .tsub{font-weight:400;font-size:11px;line-height:1.15}
+table.t.cmp .pill{padding:1px 6px;font-size:11.5px}
+table.t.cmp td.dtc{white-space:normal;overflow-wrap:anywhere}
 .xfer{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:10px 14px}   /* «details.card» deyil: sual təhlili ilə qarışmasın */
 .xfer summary{font-size:14px}
 
@@ -1628,6 +1634,7 @@ let savePending = false;
 function saveNow() {
   savePending = false;
   try { localStorage.setItem(LS_KEY, JSON.stringify({ cfg: state.cfg, scans: state.scans, manual: state.manual, manualV: 2, essay: state.essay, adj: state.adj, names: state.names, keyVariant: state.keyVariant })); } catch (e) { }
+  if (typeof canliPing === 'function') canliPing();
 }
 const saveLater = debounce(saveNow, 400);
 function save() { savePending = true; saveLater(); }
@@ -3098,6 +3105,452 @@ function neticeCard(all0) {
   return root;
 }
 
+/* =====================  CANLI PAYLAŞMA: başqa cihazda yalnız baxış  =====================
+   Yoxlama gedən kompüterdəki sayt nəticələri (şəkilsiz) ŞİFRƏLƏYİB sizin Google Apps Script-ə (Kod.gs) göndərir; siz öz cihazınızda «baxış linki» ilə açıb canlı izləyirsiniz.
+   Fayl göndərmək lazım deyil. Baxış rejimi yalnız oxuyur: bu cihazdakı heç bir məlumata toxunmur, heç nəyi dəyişmir və saxlamır.
+   Gizli kod S (16 təsadüfi bayt) yalnız «göndərən linki»ndədir. Ondan: kanal = SHA256('chan|'+S)[0..12 bayt], yazma nişanı = SHA256('wtok|'+S), şifrə açarı = SHA256('key|'+S) (AES-256-GCM).
+   «Baxış linki»ndə yalnız kanal və şifrə açarı var (yazma nişanı yoxdur): baxan oxuya bilər, yaza bilməz. Server yalnız şifrəli mətn saxlayır; açarlar linkin # hissəsindədir, heç bir serverə getmir. */
+const CANLI_LS = 'blok_omr_canli_v1', CANLI_SRV = 2;
+const CANLI_DEB = 5000, CANLI_GAP = 15000, CANLI_BEAT = 240000, CANLI_POLL = 25000;      // dəyişiklikdən sonra gözləmə, iki göndərmə arası ən az, nəfəs (dəyişiklik olmasa da), baxışın yoxlama aralığı (ms)
+const CANLI_GS = "/* Canlı nəticələr serveri (Google Apps Script), versiya 2.\n   İmtahan yoxlama saytı nəticələri bura ŞİFRƏLİ göndərir, baxış linki olan cihaz oradan oxuyur.\n   Server heç nəyi oxuya bilmir: şifrə açarı yalnız linklərdədir. Google hesabınıza heç bir icazə tələb etmir. */\nvar CHUNK = 8000;          // bir parçanın uzunluğu (Script Properties dəyəri 9 KB-dan böyük ola bilməz)\nvar MAX_ONE = 330000;      // bir kanalın maksimum ölçüsü\nvar MAX_ALL = 440000;      // bütün kanalların cəmi (Script Properties ümumi həddi 500 KB)\nvar MAX_CH = 6;            // eyni anda saxlanan kanal sayı\nvar TTL = 45 * 86400000;   // 45 gün yenilənməyən kanal silinir\n\nfunction J_(o) {\n  return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);\n}\nfunction sha_(s) {\n  var b = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, s, Utilities.Charset.UTF_8), o = '';\n  for (var i = 0; i < b.length; i++) o += ('0' + (b[i] & 255).toString(16)).slice(-2);\n  return o;\n}\nfunction okChan_(c) { return /^[0-9a-f]{24}$/.test(c); }\n\nfunction doGet(e) {\n  try {\n    var p = (e && e.parameter) || {}, a = String(p.a || '');\n    if (a === 'ping') return J_({ ok: 1, v: 2, now: Date.now() });\n    if (a === 'v' || a === 'g') return read_(a, String(p.c || ''));\n    return ContentService.createTextOutput('Canlı nəticələr serveri işləyir ✓').setMimeType(ContentService.MimeType.TEXT);\n  } catch (err) { return J_({ ok: 0, e: 'srv', m: String(err) }); }\n}\n\nfunction doPost(e) {\n  try {\n    var b = JSON.parse((e && e.postData && e.postData.contents) || '{}');\n    if (b.a === 'put') return put_(b);\n    if (b.a === 'del') return del_(b);\n    return J_({ ok: 0, e: 'bad' });\n  } catch (err) { return J_({ ok: 0, e: 'srv', m: String(err) }); }\n}\n\nfunction read_(a, c) {\n  if (!okChan_(c)) return J_({ ok: 0, e: 'bad' });\n  var P = PropertiesService.getScriptProperties(), now = Date.now();\n  if (a === 'v') {\n    var s = P.getProperty('m:' + c);\n    if (!s) return J_({ ok: 0, e: 'none', now: now });\n    var m = JSON.parse(s);\n    return J_({ ok: 1, ver: m.ver, ts: m.ts, n: m.len, now: now });\n  }\n  var all = P.getProperties(), s2 = all['m:' + c];\n  if (!s2) return J_({ ok: 0, e: 'none', now: now });\n  var m2 = JSON.parse(s2), parts = [];\n  for (var j = 0; j < m2.n; j++) {\n    var x = all['d:' + c + ':' + m2.ver + ':' + j];\n    if (x == null) return J_({ ok: 0, e: 'retry', now: now });\n    parts.push(x);\n  }\n  return J_({ ok: 1, ver: m2.ver, ts: m2.ts, d: parts.join(''), now: now });\n}\n\nfunction put_(b) {\n  var c = String(b.c || ''), w = String(b.w || ''), d = String(b.d || '');\n  if (!okChan_(c) || !/^[0-9a-f]{64}$/.test(w) || !/^[A-Za-z0-9+\\/=]+$/.test(d)) return J_({ ok: 0, e: 'bad' });\n  if (d.length > MAX_ONE) return J_({ ok: 0, e: 'big' });\n  var lock = LockService.getScriptLock();\n  if (!lock.tryLock(20000)) return J_({ ok: 0, e: 'busy' });\n  try {\n    var P = PropertiesService.getScriptProperties(), all = P.getProperties(), now = Date.now(), wh = sha_(w), mk = 'm:' + c;\n    var old = all[mk] ? JSON.parse(all[mk]) : null;\n    if (old && old.w !== wh) return J_({ ok: 0, e: 'auth' });\n    var ver = (old ? old.ver : 0) + 1, next = {}, k, i, j, others = [];\n    for (k in all) {\n      if (k.indexOf('m:') === 0 && k !== mk) {\n        var mm = JSON.parse(all[k]);\n        if (now - mm.ts <= TTL) others.push({ c: k.slice(2), m: mm });\n      }\n    }\n    others.sort(function (x, y) { return y.m.ts - x.m.ts; });     // ən yeni əvvəldə\n    var used = d.length + 300;\n    for (i = 0; i < others.length && i < MAX_CH - 1; i++) {\n      var o = others[i];\n      if (used + o.m.len + 300 > MAX_ALL) continue;\n      used += o.m.len + 300;\n      next['m:' + o.c] = JSON.stringify(o.m);\n      for (j = 0; j < o.m.n; j++) { var dk = 'd:' + o.c + ':' + o.m.ver + ':' + j; if (all[dk] != null) next[dk] = all[dk]; }\n    }\n    var n = Math.ceil(d.length / CHUNK);\n    for (j = 0; j < n; j++) next['d:' + c + ':' + ver + ':' + j] = d.substr(j * CHUNK, CHUNK);\n    next[mk] = JSON.stringify({ w: wh, ver: ver, ts: now, n: n, len: d.length });\n    P.setProperties(next, true);\n    return J_({ ok: 1, ver: ver, ts: now, now: now });\n  } finally { lock.releaseLock(); }\n}\n\nfunction del_(b) {\n  var c = String(b.c || ''), w = String(b.w || '');\n  if (!okChan_(c) || !/^[0-9a-f]{64}$/.test(w)) return J_({ ok: 0, e: 'bad' });\n  var lock = LockService.getScriptLock();\n  if (!lock.tryLock(20000)) return J_({ ok: 0, e: 'busy' });\n  try {\n    var P = PropertiesService.getScriptProperties(), all = P.getProperties(), mk = 'm:' + c;\n    if (!all[mk]) return J_({ ok: 1, gone: 1 });\n    if (JSON.parse(all[mk]).w !== sha_(w)) return J_({ ok: 0, e: 'auth' });\n    var next = {}, k, pre = 'd:' + c + ':';\n    var left = 0;\n    for (k in all) if (k !== mk && k.indexOf(pre) !== 0) { next[k] = all[k]; left++; }\n    if (left) P.setProperties(next, true); else P.deleteAllProperties();\n    return J_({ ok: 1, gone: 1 });\n  } finally { lock.releaseLock(); }\n}\n";                                                         // build.py Kod.gs mətnini bura qoyur
+const canliEnc = new TextEncoder(), canliDec = new TextDecoder();
+const canliUi = { viewer: false, busy: false, dirty: false, timer: null, due: 0, last: 0, sig: '', n: 0, kb: 0, err: '', fail: 0, retryAt: 0, empty: false, paint: null };
+const canliHex = u8 => Array.from(u8, b => (b < 16 ? '0' : '') + b.toString(16)).join('');
+const canliB64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+const canliUnb64 = t => { const bin = atob(t), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; };
+const canliB64u = u8 => canliB64(u8).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const canliUnb64u = t => { t = String(t).replace(/-/g, '+').replace(/_/g, '/'); while (t.length % 4) t += '='; return canliUnb64(t); };
+function canliLoad() { try { const o = JSON.parse(localStorage.getItem(CANLI_LS) || '{}'); return o && typeof o === 'object' && !Array.isArray(o) ? o : {}; } catch (e) { return {}; } }
+function canliStore(o) { try { localStorage.setItem(CANLI_LS, JSON.stringify(o)); } catch (e) { } }
+/* yalnız script.google.com veb tətbiq ünvanları qəbul olunur (başqa saytlara məlumat getməsin) */
+const canliOkUrl = u => typeof u === 'string' && u.length < 300 && /^https:\/\/script\.google\.com\/(?:macros\/s|a\/macros\/[A-Za-z0-9.-]+\/s|a\/[A-Za-z0-9.-]+\/macros\/s)\/[A-Za-z0-9_-]+\/exec$/.test(u);
+function canliNormUrl(s) {
+  s = String(s || '').trim().replace(/[?#].*$/, '').replace(/\/+$/, '');
+  if (/^AKfy[A-Za-z0-9_-]{20,}$/.test(s)) s = 'https://script.google.com/macros/s/' + s + '/exec';        // yalnız «Deployment ID» yapışdırılıbsa
+  return canliOkUrl(s) ? s : null;
+}
+const canliNewSecret = () => canliB64u(crypto.getRandomValues(new Uint8Array(16)));
+async function canliKeys(s) {
+  const dg = async t => new Uint8Array(await crypto.subtle.digest('SHA-256', canliEnc.encode(t + '|' + s)));
+  const c = await dg('chan'), w = await dg('wtok'), k = await dg('key');
+  return { c: canliHex(c).slice(0, 24), w: canliHex(w), k };
+}
+async function canliPipe(u8, ts) { return new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(ts)).arrayBuffer()); }
+/* açıq mətn: 1 bayt (0 = adi JSON, 1 = gzip) + JSON; şifrə: AES-256-GCM, 12 baytlıq təsadüfi IV, kanal adı əlavə təsdiqlənən verilənlərdir */
+async function canliSeal(obj, chan, kb) {
+  const raw = canliEnc.encode(JSON.stringify(obj)); let flag = 0, body = raw;
+  try { if (typeof CompressionStream === 'function') { const z = await canliPipe(raw, new CompressionStream('gzip')); if (z.length < raw.length) { flag = 1; body = z; } } } catch (e) { }
+  const pt = new Uint8Array(body.length + 1); pt[0] = flag; pt.set(body, 1);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await crypto.subtle.importKey('raw', kb, 'AES-GCM', false, ['encrypt']);
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: canliEnc.encode(chan) }, key, pt));
+  const out = new Uint8Array(12 + ct.length); out.set(iv, 0); out.set(ct, 12);
+  return canliB64(out);
+}
+async function canliOpen(b64, chan, kb) {
+  const all = canliUnb64(b64);
+  const key = await crypto.subtle.importKey('raw', kb, 'AES-GCM', false, ['decrypt']);
+  const pt = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: all.subarray(0, 12), additionalData: canliEnc.encode(chan) }, key, all.subarray(12)));
+  let body = pt.subarray(1);
+  if (pt[0] === 1) body = await canliPipe(body, new DecompressionStream('gzip'));
+  return JSON.parse(canliDec.decode(body));
+}
+/* ---------- server ilə əlaqə: «sadə» sorğular (preflight yoxdur); Apps Script 302 ilə yönləndirir, fetch izləyir ---------- */
+function canliErr(code, msg) { const e = new Error(msg); e.canli = code; return e; }
+function canliSrvMsg(r) {
+  const e = r && r.e;
+  return e === 'auth' ? 'Kod uyğun gəlmir: bu kanal başqa kodla yaradılıb. «Yeni kod yarat» basıb linkləri yenidən göndərin.'
+    : e === 'big' ? 'Nəticələr serverin saxlama həddindən böyükdür.'
+      : e === 'busy' ? 'Server məşğuldur, bir azdan təkrar cəhd olunacaq.'
+        : e === 'retry' ? 'Server yenilənir, bir azdan təkrar cəhd olunacaq.'
+          : e === 'bad' ? 'Sorğu server tərəfindən qəbul olunmadı (Apps Script kodu köhnə ola bilər).'
+            : 'Server xətası' + (r && r.m ? ': ' + r.m : '');
+}
+async function canliCall(u, body, qs) {
+  const ctl = typeof AbortController === 'function' ? new AbortController() : null, tm = ctl ? setTimeout(() => ctl.abort(), 60000) : 0;
+  let res, txt;
+  try {
+    res = body
+      ? await fetch(u, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'text/plain;charset=utf-8' }, credentials: 'omit', cache: 'no-store', redirect: 'follow', signal: ctl ? ctl.signal : undefined })
+      : await fetch(u + '?' + qs + '&_=' + Date.now(), { credentials: 'omit', cache: 'no-store', redirect: 'follow', signal: ctl ? ctl.signal : undefined });
+    txt = await res.text();
+  } catch (e) {
+    throw canliErr('net', navigator.onLine === false ? 'İnternet bağlantısı yoxdur.' : 'Serverə qoşulmaq olmadı. İnterneti və Apps Script-in «Hər kəs (Anyone)» icazəsi ilə yerləşdirildiyini yoxlayın.');
+  } finally { if (tm) clearTimeout(tm); }
+  let j; try { j = JSON.parse(txt); } catch (e) { throw canliErr('url', res && res.ok ? 'Bu ünvandan düzgün cavab gəlmir: ünvan səhvdir və ya Apps Script kodu köhnədir.' : 'Server xəta qaytardı (' + (res ? res.status : '?') + ').'); }
+  return j;
+}
+const canliP2 = n => (n < 10 ? '0' : '') + n;
+const canliClock = ms => { const d = new Date(ms); return canliP2(d.getHours()) + ':' + canliP2(d.getMinutes()) + ':' + canliP2(d.getSeconds()); };
+function canliAgo(ms) {
+  const s = Math.max(0, Math.round(ms / 1000));
+  return s < 8 ? 'indicə' : s < 60 ? s + ' san əvvəl' : s < 3600 ? Math.floor(s / 60) + ' dəq əvvəl' : s < 86400 ? Math.floor(s / 3600) + ' saat əvvəl' : Math.floor(s / 86400) + ' gün əvvəl';
+}
+/* ---------- göndərilən görüntü: «4 · Nəticələr» cədvəlinin kiçik, şəkilsiz forması ---------- */
+function canliSnapshot(all, label) {
+  const c = state.cfg, r2 = v => Math.round(v * 100) / 100, hasWE = wTotal() > 0 || eTotal() > 0;
+  const st = all.map(r => {
+    const sc = r.sc;
+    const u = sc.subj.map((x, si) => {
+      const S = c.subjects[si];
+      return [r.p1 && S.rows ? r2(x.D + x.Tp) : null, r.p1 && S.nC ? x.Y : null, r.p2 && S.nK ? x.K : null, (r.hasW && S.nW) || (r.hasE && S.nE) ? r2(x.Wp + x.Ep) : null, sc.hasKey ? r2(x.weighted) : null];
+    });
+    const miss = sc.incomplete ? ((sc.subj.some(x => x.wMissing) ? 'yazılı? ' : '') + (sc.subj.some(x => x.eMissing) ? 'esse? ' : '') + (sc.langMissing ? 'dil?' : '')).trim() : '';
+    return { i: String(r.id), n: String(r.name || '').slice(0, 80), g: String(r.nm.g || '').slice(0, 20), v: r.variant || '', l: flOn() ? (r.lang === 0 || r.lang === 1 ? r.lang : -1) : null,
+      t: sc.hasKey ? r2(sc.total) : null, s: r.hasErr ? 2 : r.hasWarn ? 1 : 0, x: miss, inc: sc.incomplete ? 1 : 0, a: sc.adjN || 0, p: (r.p1 ? 1 : 0) + (r.p2 ? 2 : 0), u,
+      m: r.issues.map(i => i.m).join(' • ').slice(0, 400) };
+  });
+  return { v: 1, ts: Date.now(), src: String(label || '').slice(0, 40), ex: String(c.name || ''), sj: c.subjects.map(S => ({ n: S.name, k: S.coef })), fl: flOn() ? c.fl.n.slice(0, 2).map(String) : null,
+    hw: hasWE ? 1 : 0, mx: 100 * c.subjects.reduce((a, s) => a + s.coef, 0), st };
+}
+/* ---------- göndərən: hər saxlanışdan sonra (5 san sakitlik), ən çox 15 saniyədə bir; dəyişiklik olmasa 4 dəqiqədən bir «nəfəs» ---------- */
+function canliPing() {
+  if (canliUi.viewer) return;
+  let on = false; try { on = !!canliLoad().on; } catch (e) { }
+  if (!on) return;
+  canliUi.dirty = true;
+  if (!canliUi.busy) canliSchedule(CANLI_DEB, true);
+}
+/* onlyEarlier: artıq daha erkən göndərmə planlanıbsa toxunma (vərəqlər fasiləsiz oxunanda göndərmə sonsuz təxirə düşməsin) */
+function canliSchedule(ms, onlyEarlier) {
+  const now = Date.now(), wait = Math.max(0, ms, canliUi.last + CANLI_GAP - now, canliUi.fail ? canliUi.retryAt - now : 0), due = now + wait;
+  if (onlyEarlier && canliUi.timer && canliUi.due <= due) return;
+  clearTimeout(canliUi.timer); canliUi.due = due;
+  canliUi.timer = setTimeout(() => canliRun(false), wait);
+}
+const canliPaint = () => { try { if (canliUi.paint) canliUi.paint(); } catch (e) { } };
+async function canliRun(force) {
+  clearTimeout(canliUi.timer); canliUi.timer = null; canliUi.due = 0;
+  const C = canliLoad();
+  if (canliUi.viewer || !C.on || !canliOkUrl(C.u) || !C.s || canliUi.busy) return;
+  if (!(window.crypto && crypto.subtle)) { canliUi.err = 'Bu brauzer şifrələməni dəstəkləmir. Saytı https ilə (GitHub linki) açın.'; canliPaint(); return; }
+  canliUi.busy = true; canliUi.dirty = false; canliPaint();
+  let again = 0;
+  try {
+    const all = buildStudents();
+    if (!all.length) { canliUi.empty = true; canliUi.err = ''; canliUi.fail = 0; return; }
+    canliUi.empty = false;
+    const snap = canliSnapshot(all, C.label), sig = JSON.stringify([snap.st, snap.ex, snap.sj, snap.fl, snap.src]);
+    if (!force && sig === canliUi.sig && Date.now() - canliUi.last < CANLI_BEAT - 5000) { again = Math.max(1000, canliUi.last + CANLI_BEAT - Date.now()); return; }
+    const K = await canliKeys(C.s), d = await canliSeal(snap, K.c, K.k);
+    const r = await canliCall(C.u, { a: 'put', c: K.c, w: K.w, d });
+    if (!r || !r.ok) throw canliErr((r && r.e) || 'srv', canliSrvMsg(r));
+    canliUi.sig = sig; canliUi.last = Date.now(); canliUi.n = all.length; canliUi.kb = Math.max(1, Math.round(d.length / 1024)); canliUi.err = ''; canliUi.fail = 0;
+    again = CANLI_BEAT;
+  } catch (e) {
+    canliUi.fail++; canliUi.err = (e && e.message) || 'Göndərmə alınmadı';
+    again = Math.min(300000, 10000 * Math.pow(2, Math.min(canliUi.fail, 5) - 1));
+    canliUi.retryAt = Date.now() + again;
+  } finally {
+    canliUi.busy = false; canliPaint();
+    if (canliUi.dirty) canliSchedule(CANLI_DEB);
+    else if (again && canliLoad().on) canliSchedule(again);
+  }
+}
+/* ---------- linklər ---------- */
+async function canliLinks(C) {
+  const K = await canliKeys(C.s), base = location.href.split('#')[0];
+  return {
+    writer: base + '#paylas=' + canliB64u(canliEnc.encode(JSON.stringify({ u: C.u, s: C.s, n: C.label || '' }))),
+    viewer: base + '#izle=' + canliB64u(canliEnc.encode(JSON.stringify({ u: C.u, c: K.c, k: canliB64u(K.k) }))),
+  };
+}
+function canliParseHash(kind) {
+  const m = new RegExp('^#' + kind + '=([A-Za-z0-9_-]+)').exec(location.hash); if (!m) return null;
+  try { const j = JSON.parse(canliDec.decode(canliUnb64u(m[1]))); return j && typeof j === 'object' && !Array.isArray(j) ? j : null; } catch (e) { return null; }
+}
+async function canliCopy(t) {
+  try { await navigator.clipboard.writeText(t); toast('Kopyalandı'); return; } catch (e) { }
+  const x = h('textarea', { style: { position: 'fixed', opacity: 0, left: 0, top: 0 } }); x.value = t; document.body.append(x); x.focus(); x.select();
+  try { document.execCommand('copy'); toast('Kopyalandı'); } catch (e) { toast('Mətni seçib kopyalayın'); }
+  x.remove();
+}
+/* ---------- «göndərən linki» açılanda: bu kompüter göndərməyə başlayır ---------- */
+async function canliApplyLink() {
+  if (canliUi.viewer || !/^#paylas=/.test(location.hash)) return;
+  const J = canliParseHash('paylas');
+  try { history.replaceState(null, '', location.href.split('#')[0]); } catch (e) { }              // gizli kod ünvan sətrində qalmasın
+  if (!J || !canliOkUrl(J.u) || typeof J.s !== 'string' || !/^[A-Za-z0-9_-]{20,40}$/.test(J.s)) { toast('Göndərən linki oxunmadı. Linkin hamısını kopyaladığınızdan əmin olun.', 6000); return; }
+  const C = canliLoad();
+  if (C.on && C.u === J.u && C.s === J.s) { state.tab = 'results'; renderAll(); toast('Canlı paylaşma bu kompüterdə artıq işləyir'); return; }
+  const id = (/\/s\/([A-Za-z0-9_-]+)\/exec$/.exec(J.u) || [])[1] || '';
+  if (!(await askConfirm('Bu kompüterdən nəticələr (şagird nömrəsi, ad və ballar) şifrələnmiş halda Google Apps Script serverinə (…' + id.slice(-6) + ') göndəriləcək; baxış linki olan şəxs onları canlı görəcək. Linki rəhbərinizdən aldınızsa «Bəli, başla» basın.' + (C.on ? ' Əvvəlki paylaşma dayandırılacaq.' : ''), 'Bəli, başla'))) return;
+  C.u = J.u; C.s = J.s; C.on = true; C.label = String(J.n || C.label || '').slice(0, 40);
+  canliStore(C); canliUi.sig = ''; canliUi.last = 0; canliUi.fail = 0; canliUi.err = '';
+  state.tab = 'results'; renderAll(); window.scrollTo({ top: 0 });
+  toast('Canlı paylaşma işə düşdü', 5000);
+  canliRun(true);
+}
+/* ---------- «4 · Nəticələr» bölməsindəki kart ---------- */
+function canliCard() {
+  let C = canliLoad(), showLinks = false;
+  const upd = fn => { const o = canliLoad(); fn(o); canliStore(o); C = o; };
+  const urlIn = h('input', { type: 'text', value: C.u || '', placeholder: 'https://script.google.com/macros/s/…/exec', autocomplete: 'off', spellcheck: 'false', 'aria-label': 'Apps Script ünvanı', 'data-r': 'url' });
+  const urlMsg = h('div', { class: 'small', 'data-r': 'urlmsg', style: { margin: '4px 0 0' } });
+  const labelIn = h('input', { type: 'text', value: C.label || '', maxlength: 40, placeholder: 'məs., Kabinet 12 kompüteri', 'data-r': 'label', oninput: e => upd(o => { o.label = e.target.value.trim().slice(0, 40); }) });
+  const status = h('div', { class: 'small', 'data-r': 'status', style: { margin: '10px 0 0' } });
+  const actions = h('div', { class: 'row', style: { margin: '12px 0 0' } });
+  const linksBox = h('div');
+  const say = (txt, kind) => { urlMsg.textContent = txt; urlMsg.style.color = kind === 'bad' ? 'var(--err)' : kind === 'ok' ? 'var(--ok)' : 'var(--muted)'; };
+  const readUrl = () => {
+    const u = canliNormUrl(urlIn.value);
+    if (!u) { say(/\/dev\s*$/.test(urlIn.value) ? 'Bu «test» ünvanıdır (/dev). «Yerləşdir» → «Yeni yerləşdirmə» ilə alınan, /exec ilə bitən ünvan lazımdır.' : 'Ünvan düzgün deyil. «Yerləşdir» pəncərəsindəki «Web app URL» (https://script.google.com/…/exec) kopyalanmalıdır.', 'bad'); return null; }
+    if (u !== urlIn.value) urlIn.value = u;
+    return u;
+  };
+  const test = async () => {
+    const u = readUrl(); if (!u) return null;
+    say('Yoxlanır…');
+    try {
+      const r = await canliCall(u, null, 'a=ping');
+      if (r && r.ok && r.v >= CANLI_SRV) { say('✓ Server işləyir.', 'ok'); return u; }
+      say(r && r.ok ? 'Server kodu köhnədir: yeni kodu yapışdırıb «Yerləşdir» → «Yerləşdirmələri idarə et» → qələm → «Yeni versiya» ilə yeniləyin.' : canliSrvMsg(r), 'bad');
+    } catch (e) { say(e.message, 'bad'); }
+    return null;
+  };
+  const paintStatus = () => {
+    const col = c => { status.style.color = c; };
+    if (!C.on) { col('var(--muted)'); status.textContent = 'Bu kompüterdən nəticələr göndərilmir.'; return; }
+    if (canliUi.busy) { col('var(--muted)'); status.textContent = '⏳ Göndərilir…'; return; }
+    if (canliUi.err) { col('var(--err)'); status.textContent = '⚠ ' + canliUi.err + ' (təkrar cəhd ' + Math.max(1, Math.round((canliUi.retryAt - Date.now()) / 1000)) + ' saniyədən sonra)'; return; }
+    if (canliUi.empty) { col('var(--warn)'); status.textContent = 'Göndəriləcək nəticə yoxdur: əvvəlcə vərəqləri yükləyin.'; return; }
+    if (canliUi.last) { col('var(--ok)'); status.textContent = '✓ Paylaşılır · son göndərmə ' + canliClock(canliUi.last) + ' · ' + canliUi.n + ' şagird · ' + canliUi.kb + ' KB'; return; }
+    col('var(--muted)'); status.textContent = 'Hazırlanır…';
+  };
+  const act = (label, fn, cls) => h('button', { class: 'btn ' + (cls || ''), onclick: fn }, label);
+  const start = async () => {
+    const u = await test(); if (!u) return;
+    upd(o => { o.u = u; o.s = o.s || canliNewSecret(); o.on = true; });
+    canliUi.sig = ''; canliUi.last = 0; canliUi.fail = 0; canliUi.err = ''; paint(); canliRun(true);
+  };
+  const stop = () => { upd(o => { o.on = false; }); clearTimeout(canliUi.timer); canliUi.timer = null; canliUi.due = 0; canliUi.err = ''; paint(); };
+  const makeLinks = async () => {
+    const u = await test(); if (!u) return;
+    upd(o => { o.u = u; o.s = o.s || canliNewSecret(); });
+    showLinks = true; paint(); paintLinks();
+  };
+  const renew = async () => {
+    if (!C.s || !(await askConfirm('Yeni kod yaradılsın? Köhnə linklər işləməyəcək, yeni linkləri yenidən göndərməli olacaqsınız. Köhnə kodla serverdə qalan nəticələr silinəcək.', 'Bəli, yarat'))) return;
+    try { const K0 = await canliKeys(C.s); if (canliOkUrl(C.u)) await canliCall(C.u, { a: 'del', c: K0.c, w: K0.w }); } catch (e) { }
+    upd(o => { o.s = canliNewSecret(); }); canliUi.sig = ''; canliUi.last = 0; showLinks = true; paint(); paintLinks();
+    if (C.on) canliRun(true);
+  };
+  const wipe = async () => {
+    if (!C.s || !canliOkUrl(C.u) || !(await askConfirm('Serverdəki canlı nəticələr silinsin və bu kompüterdən göndərmə dayandırılsın? Baxış linki boş görünəcək. Bu kompüterdəki heç nə silinmir.', 'Bəli, sil'))) return;
+    try {
+      const K = await canliKeys(C.s), r = await canliCall(C.u, { a: 'del', c: K.c, w: K.w });
+      if (!r || !r.ok) throw canliErr((r && r.e) || 'srv', canliSrvMsg(r));
+      stop(); toast('Serverdəki nəticələr silindi');
+    } catch (e) { toast(e.message, 6000); }
+  };
+  const paint = () => {
+    C = canliLoad(); paintStatus();
+    actions.replaceChildren(...[
+      C.on ? act('İndi göndər', () => { canliUi.err = ''; canliRun(true); }, 'primary') : act('Bu kompüterdən göndərməyə başla', start, 'primary'),
+      C.on ? act('Dayandır', stop) : null,
+      act(showLinks ? 'Linkləri gizlət' : 'Linkləri göstər / yarat', async () => { if (showLinks) { showLinks = false; paint(); paintLinks(); } else await makeLinks(); }),
+      act('Ünvanı yoxla', test)].filter(Boolean));   // replaceChildren(null) «null» mətni əlavə edir
+  };
+  const paintLinks = async () => {
+    linksBox.replaceChildren();
+    if (!showLinks || !C.u || !C.s) return;
+    const L = await canliLinks(C);
+    const block = (key, title, hint, url) => h('div', { style: { margin: '12px 0 0' } },
+      h('div', { style: { fontWeight: 600 } }, title), h('p', { class: 'small muted', style: { margin: '2px 0 6px' } }, hint),
+      h('textarea', { readonly: true, rows: 3, class: 'mono', spellcheck: 'false', value: url, 'data-r': 'link-' + key, onclick: e => e.target.select() }),
+      h('div', { class: 'row', style: { marginTop: '6px' } }, h('button', { class: 'btn sm', onclick: () => canliCopy(url) }, 'Kopyala'),
+        navigator.share ? h('button', { class: 'btn sm', onclick: () => navigator.share({ url }).catch(() => { }) }, 'Göndər…') : null));
+    linksBox.append(
+      block('viewer', '1) Baxış linki — sizin cihaz üçün', 'Öz telefonunuzda və ya kompüterinizdə açın: nəticələrə yalnız baxa bilərsiniz, dəyişə bilməzsiniz.', L.viewer),
+      block('writer', '2) Göndərən linki — yoxlama gedən kompüter üçün', 'Yoxlayan şəxsə verin: o, linki həmin kompüterdə bir dəfə açıb təsdiqləyir və sayt nəticələri özü göndərməyə başlayır. Bu link ilə nəticələr yazıla bilər, ona görə yalnız həmin şəxsə verin.', L.writer),
+      h('p', { class: 'small muted', style: { margin: '10px 0 0' } }, 'İkinci imtahan (məs., 11-ci sinif) üçün ayrıca kanal lazımdırsa, «Yeni kod yarat» basın: yeni linklər yaranır, köhnələr işləməz.'));
+  };
+  const codeTa = h('textarea', { readonly: true, rows: 10, class: 'mono', spellcheck: 'false', value: CANLI_GS, style: { fontSize: '12px', letterSpacing: 0 }, onclick: e => e.target.select() });
+  const root = h('details', { class: 'xfer canli', open: C.on ? true : null },
+    h('summary', { style: { cursor: 'pointer', fontWeight: 600 } }, 'Canlı paylaşma: başqa cihazda izləmək'),
+    h('p', { class: 'small muted', style: { margin: '8px 0 4px' } }, 'Yoxlama gedən kompüterdəki sayt nəticələri (şəkilsiz, şifrələnmiş) sizin Google Apps Script-ə göndərir. Siz öz telefonunuzda və ya kompüterinizdə «baxış linki» ilə canlı izləyirsiniz: fayl göndərmək lazım deyil. Baxış yalnız oxumaq üçündür. Dəyişiklik göndərən kompüterdə təxminən 5–20 saniyəyə göndərilir, baxış səhifəsi isə 25 saniyədən bir yoxlayır.'),
+    h('p', { class: 'small muted', style: { margin: '0 0 8px' } }, 'Bir dəfəlik quraşdırma: aşağıdakı kodu Google Apps Script-də «Veb tətbiq» kimi yerləşdirin («Hər kəs» icazəsi ilə), alınan ünvanı bura yapışdırın.'),
+    h('details', { style: { margin: '0 0 10px' } }, h('summary', { style: { cursor: 'pointer' } }, 'Apps Script kodunu göstər'),
+      h('div', { style: { margin: '8px 0 0' } }, codeTa, h('div', { class: 'row', style: { marginTop: '6px' } }, h('button', { class: 'btn sm', onclick: () => canliCopy(CANLI_GS) }, 'Kodu kopyala')))),
+    h('label', { class: 'f' }, 'Apps Script ünvanı (Web app URL)'), urlIn, urlMsg,
+    h('div', { style: { margin: '10px 0 0' } }, h('label', { class: 'f' }, 'Bu kompüterin adı (baxış səhifəsində göstərilir, istəyə bağlı)'), labelIn),
+    status, actions, linksBox,
+    h('div', { class: 'row', style: { margin: '14px 0 0' } },
+      h('button', { class: 'btn sm', onclick: renew }, 'Yeni kod yarat'), h('button', { class: 'btn sm danger', onclick: wipe }, 'Serverdəki nəticələri sil')));
+  canliUi.paint = paint;
+  paint();
+  return root;
+}
+/* =====================  BAXIŞ REJİMİ (#izle=…): yalnız oxuyur  ===================== */
+function canliViewerBoot() {
+  if (!/^#izle=/.test(location.hash)) return false;
+  canliUi.viewer = true;
+  window.addEventListener('hashchange', () => location.reload());
+  const hd = document.querySelector('header.top'), tabs = document.getElementById('tabs'), main = document.getElementById('main');
+  if (hd) { const t = hd.querySelector('h1'), p = hd.querySelector('p'); if (t) t.textContent = 'Canlı nəticələr'; if (p) p.textContent = 'Yalnız baxış: bu səhifədən heç nə dəyişdirilmir. Nəticələr yoxlama gedən kompüterdən avtomatik yenilənir.'; }
+  if (tabs) tabs.style.display = 'none';
+  document.title = 'Canlı nəticələr';
+  main.replaceChildren();
+  const J = canliParseHash('izle');
+  if (!J || !canliOkUrl(J.u) || !/^[0-9a-f]{24}$/.test(String(J.c)) || !/^[A-Za-z0-9_-]{43}$/.test(String(J.k))) {
+    main.append(h('div', { class: 'note err' }, 'Baxış linki oxunmadı. Linkin hamısını kopyaladığınızdan əmin olun (link uzundur, bəzi proqramlar onu yarıda kəsir).'));
+    return true;
+  }
+  if (!(window.crypto && crypto.subtle)) { main.append(h('div', { class: 'note err' }, 'Bu brauzer şifrələməni dəstəkləmir. Linki Chrome, Safari və ya Edge-də açın.')); return true; }
+  canliViewer(main, J);
+  return true;
+}
+function canliViewer(main, J) {
+  const kb = canliUnb64u(J.k);
+  const V = { lastChange: Date.now(), snap: null, ver: null, srvTs: 0, srvNow: 0, perfAt: 0, err: '', none: false, q: '', sort: 'id', dir: 1, compact: null, open: new Set(), auto: true, busy: false, timer: null };
+  const line = h('div', { class: 'small', 'data-r': 'line', style: { margin: '6px 0' } });
+  const title = h('h2', { style: { margin: 0 } }, 'Canlı nəticələr'), who = h('span', { class: 'small muted' });
+  const refBtn = h('button', { class: 'btn sm', 'data-r': 'refresh', onclick: () => check(true) }, 'İndi yenilə');
+  const autoCb = h('input', { type: 'checkbox', checked: true, onchange: e => { V.auto = e.target.checked; loop(); } });
+  const stat = h('div', { class: 'card' }, h('div', { class: 'row', style: { justifyContent: 'space-between', alignItems: 'baseline' } }, title, who), line,
+    h('div', { class: 'row' }, refBtn, h('label', { class: 'small', style: { display: 'flex', gap: '6px', alignItems: 'center', cursor: 'pointer' } }, autoCb, 'Avtomatik yenilə')));
+  const kpiHold = h('div'), tblHold = h('div');
+  const q = h('input', { type: 'text', placeholder: 'Nömrə və ya ad axtar…', 'data-r': 'search', style: { maxWidth: '240px' }, oninput: e => { V.q = e.target.value; paintTable(); } });
+  const viewBtn = h('button', { class: 'btn', 'data-r': 'view', onclick: () => { V.compact = !isCompact(); paintTable(); } });
+  const xlsBtn = h('button', { class: 'btn', 'data-r': 'xlsx', onclick: () => exportX() }, 'Excel yüklə (.xlsx)');
+  const grid = h('div', { class: 'card', hidden: true }, h('div', { class: 'row', style: { marginBottom: '10px' } }, h('h2', { style: { margin: 0 } }, 'Şagirdlərin balları'), q, h('div', { class: 'row', style: { marginLeft: 'auto' } }, xlsBtn, viewBtn)), tblHold);
+  main.append(h('div', { class: 'stack' }, stat, kpiHold, grid, h('p', { class: 'small muted' }, 'Bu səhifə yalnız baxış üçündür: burada heç nə dəyişdirilmir və bu cihazda heç nə saxlanmır.')));
+  const isCompact = () => V.compact == null ? !!(window.matchMedia && window.matchMedia('(max-width: 720px)').matches) : !!V.compact;
+  const age = () => V.snap ? V.srvNow - V.srvTs + (performance.now() - V.perfAt) : 0;
+  function paintLine() {
+    const S = V.snap, bits = [];
+    if (!S) {
+      if (V.err) bits.push(h('span', { style: { color: 'var(--err)' } }, '⚠ ' + V.err));
+      else if (V.none) bits.push('Hələ heç nə göndərilməyib. Yoxlama gedən kompüterdə sayt açılıb «Canlı paylaşma» işə salınmalıdır; bu səhifə özü yenilənəcək.');
+      else bits.push('Yüklənir…');
+    } else {
+      const a = age(), stale = a > 12 * 60000;
+      bits.push(h('span', { style: { color: stale ? 'var(--warn)' : 'var(--ok)' } }, '● '), stale ? 'Göndərən kompüter yeniləmir · ' : 'Canlı · ', 'son yeniləmə ' + canliClock(V.srvTs) + ' (' + canliAgo(a) + ')');
+      if (stale) bits.push(h('div', { class: 'muted' }, 'Sayt bağlanıb və ya internet kəsilib ola bilər. Aşağıda göndərilən son nəticələr göstərilir.'));
+      if (V.none) bits.push(h('div', { style: { color: 'var(--warn)' } }, 'Serverdə nəticə qalmayıb (silinib). Aşağıda son alınmış nəticələr göstərilir.'));
+      if (V.err) bits.push(h('div', { style: { color: 'var(--err)' } }, '⚠ ' + V.err));
+    }
+    line.replaceChildren(...bits);
+    refBtn.textContent = V.busy ? 'Yenilənir…' : 'İndi yenilə'; refBtn.disabled = V.busy;
+  }
+  function paintKpi() {
+    const S = V.snap; kpiHold.replaceChildren(); if (!S) return;
+    const st = S.st, tt = st.filter(r => r.t != null).map(r => r.t), avg = tt.length ? tt.reduce((a, b) => a + b, 0) / tt.length : null;
+    const kpi = (b, s) => h('div', { class: 'kpi' }, h('b', {}, b), h('span', {}, s));
+    kpiHold.append(h('div', { class: 'cards3' }, kpi(st.length, 'şagird'), kpi(fmt(avg), 'orta ümumi bal (maks. ' + fmt(S.mx) + ')'), kpi(tt.length ? fmt(Math.max(...tt)) : '—', 'ən yüksək'), kpi(tt.length ? fmt(Math.min(...tt)) : '—', 'ən aşağı'),
+      kpi(st.filter(r => r.s > 0).length, 'yoxlanmalı'), S.hw ? kpi(st.filter(r => r.inc).length, 'yazılı/esse balı tam deyil') : null));
+  }
+  const stCell = r => h('td', {}, h('span', { class: 'pill ' + (r.s === 2 ? 'err' : r.s === 1 ? 'warn' : 'ok') }, r.s === 2 ? 'Yoxla' : r.s === 1 ? 'Diqqət' : 'OK'), r.x ? h('span', { class: 'small muted' }, ' ' + r.x) : null, r.a ? h('span', { class: 'small adjmark' }, ' ✎' + r.a) : null);
+  const stCellC = r => h('td', {}, h('span', { class: 'pill ' + (r.s === 2 ? 'err' : r.s === 1 ? 'warn' : 'ok') }, r.s === 2 ? 'Yoxla' : r.s === 1 ? 'Diqqət' : 'OK'), r.a ? h('span', { class: 'small adjmark' }, ' ✎') : null);
+  const nv = (x, f) => x == null ? '—' : f(x);
+  const detail = (r, span) => {
+    const S = V.snap, lines = [];
+    lines.push([r.v ? 'Variant ' + r.v : 'Variant məlum deyil', S.fl && (r.l === 0 || r.l === 1) ? 'Dil: ' + S.fl[r.l] : null, (r.p & 1) ? '1-ci səhifə var' : '1-ci səhifə yoxdur', S.sj.length && (r.p & 2) ? '2-ci səhifə var' : null].filter(Boolean).join(' · '));
+    const subs = r.u.map((u, si) => h('div', { class: 'small', style: { margin: '2px 0' } }, h('b', {}, (S.sj[si] ? S.sj[si].n : 'Fənn ' + (si + 1)) + ': ' + nv(u[4], fmt)), ' bal',
+      h('span', { class: 'muted' }, ' (düz ' + nv(u[0], fmtW) + ' · yanlış ' + nv(u[1], x => x) + ' · kod ' + nv(u[2], x => x) + ' · yazılı/esse ' + nv(u[3], fmtW) + ')')));
+    if (r.x) lines.push('Hələlik daxil edilməyib: ' + r.x.replace(/\?/g, '').trim().split(/\s+/).join(', '));
+    if (r.a) lines.push('✎ Əllə bal düzəlişi var (' + r.a + ')');
+    return h('tr', { class: 'dt' }, h('td', { colspan: span, class: 'dtc', style: { whiteSpace: 'normal', background: '#f8fafd' } },
+      lines.map(t => h('div', { class: 'small' }, t)), h('div', { style: { margin: '4px 0 0' } }, subs),
+      r.m ? h('ul', { class: 'small', style: { margin: '6px 0 0', paddingLeft: '18px' } }, r.m.split(' • ').map(t => h('li', {}, t))) : h('div', { class: 'small muted', style: { marginTop: '4px' } }, 'Qeyd yoxdur.')));
+  };
+  function paintTable() {
+    const S = V.snap; if (!S) return;
+    const old = tblHold.firstChild, sy = old ? old.scrollTop : 0, sx = old ? old.scrollLeft : 0;
+    grid.hidden = false;
+    const compact = isCompact(); viewBtn.textContent = compact ? 'Ətraflı cədvəl' : 'Qısa cədvəl';
+    let rows = S.st.slice(); const qq = V.q.trim();
+    if (qq) { const fq = fold(qq); rows = rows.filter(r => r.i.includes(qq) || fold(r.n + ' ' + r.g).includes(fq)); }
+    const nz = x => x == null ? -1 : x;
+    const cmp = { id: (a, b) => a.i.localeCompare(b.i), name: (a, b) => a.n.localeCompare(b.n, 'az'), total: (a, b) => nz(a.t) - nz(b.t), prob: (a, b) => b.s - a.s };
+    S.sj.forEach((_, si) => { cmp['s' + si] = (a, b) => nz(a.u[si][4]) - nz(b.u[si][4]); });
+    rows.sort((a, b) => V.dir * (cmp[V.sort] || cmp.id)(a, b));
+    const th = (k, label, cls, rs) => h('th', { class: 'sortable ' + (cls || ''), rowspan: rs || 2, onclick: () => { if (V.sort === k) V.dir *= -1; else { V.sort = k; V.dir = (k === 'total' || /^s\d/.test(k)) ? -1 : 1; } paintTable(); } }, label + (V.sort === k ? (V.dir > 0 ? ' ▲' : ' ▼') : ''));
+    const flc = r => S.fl && (r.l === 0 || r.l === 1) ? S.fl[r.l] : '—';
+    const rowEl = (r, cells, span) => {
+      const tr = h('tr', { class: 'clk', onclick: () => { const nx = tr.nextSibling; if (nx && nx.classList && nx.classList.contains('dt')) { nx.remove(); V.open.delete(r.i); } else { tr.after(detail(r, span)); V.open.add(r.i); } } }, cells);
+      return tr;
+    };
+    const tb = h('tbody'); let head, span, colg = null;
+    if (compact) {
+      const hd = h('tr', {}, th('id', '№', '', 1), th('name', 'Ad', '', 1), th('total', 'Cəmi', 'n', 1), th('prob', 'Status', '', 1));
+      head = h('thead', {}, hd); span = 4;
+      colg = h('colgroup', {}, h('col', { class: 'c-id' }), h('col', {}), h('col', { class: 'c-tot' }), h('col', { class: 'c-st' }));
+      for (const r of rows) {
+        const cells = [h('td', {}, r.i), h('td', { class: 'nmcell' }, r.n, r.g ? h('span', { class: 'small muted' }, ' · ' + r.g) : null),
+          h('td', { class: 'n tot' }, r.t == null ? '—' : fmt(r.t), r.t == null ? h('div', { class: 'small muted tsub' }, r.v ? 'açar yoxdur' : 'variant yoxdur') : r.inc ? h('div', { class: 'small muted tsub' }, 'hələlik') : null)];
+        cells.push(stCellC(r)); tb.append(rowEl(r, cells, span));
+      }
+    } else {
+      const h1 = h('tr', {}, th('id', 'Nömrə'), th('name', 'Ad'), h('th', { rowspan: 2 }, 'Var.'), S.fl ? h('th', { rowspan: 2 }, 'Dil') : null), h2 = h('tr', {});
+      S.sj.forEach(s => { h1.append(h('th', { class: 'grp', colspan: 5 }, s.n + ' (×' + String(s.k).replace('.', ',') + ')')); ['Düz', 'Yan.', 'Kod', 'Yaz.', 'Bal'].forEach((x, i) => h2.append(h('th', { class: 'n' + (i === 0 ? ' gl' : '') }, x))); });
+      h1.append(th('total', 'Cəmi', 'n gl'), th('prob', 'Vəziyyət')); head = h('thead', {}, h1, h2); span = 4 + S.sj.length * 5 + (S.fl ? 1 : 0);
+      for (const r of rows) {
+        const cells = [h('td', {}, r.i), h('td', {}, r.n, r.g ? h('span', { class: 'small muted' }, ' · ' + r.g) : null), h('td', {}, r.v || '—'), S.fl ? h('td', {}, flc(r)) : null];
+        r.u.forEach(u => cells.push(h('td', { class: 'n gl' }, nv(u[0], fmtW)), h('td', { class: 'n' }, nv(u[1], x => x)), h('td', { class: 'n' }, nv(u[2], x => x)), h('td', { class: 'n' }, nv(u[3], fmtW)), h('td', { class: 'n', style: { fontWeight: 600 } }, nv(u[4], fmt))));
+        cells.push(h('td', { class: 'n tot gl' }, r.t == null ? '—' : fmt(r.t)), stCell(r)); tb.append(rowEl(r, cells, span));
+      }
+    }
+    for (const tr of [...tb.children]) { const id = tr.firstChild && tr.firstChild.textContent; const r = rows.find(x => x.i === id); if (r && V.open.has(r.i)) tr.after(detail(r, span)); }
+    const wrap = rows.length ? h('div', { class: 'tblwrap' }, h('table', { class: 't' + (compact ? ' cmp' : '') }, colg, head, tb)) : h('p', { class: 'muted' }, S.st.length ? 'Axtarışa uyğun şagird yoxdur.' : 'Hələ nəticə yoxdur.');
+    tblHold.replaceChildren(wrap); wrap.scrollTop = sy; wrap.scrollLeft = sx;
+  }
+  async function exportX() {
+    const S = V.snap; if (!S || !S.st.length) { toast('Hələ nəticə yoxdur'); return; }
+    const H = x => ({ v: x, s: 1 }), N = x => ({ v: x, s: 2 }), e0 = x => x == null ? '' : x;
+    const head = [H('Nömrə'), H('Ad'), H('Qrup'), H('Variant')].concat(S.fl ? [H('Xarici dil')] : []);
+    S.sj.forEach(s => ['Düz', 'Yanlış', 'Kod düz', 'Yazılı/esse', 'Fənn balı'].forEach(x => head.push(H(s.n + ' · ' + x))));
+    head.push(H('Cəmi bal'), H('Vəziyyət'), H('Qeyd'));
+    const rows = [head];
+    for (const r of S.st.slice().sort((a, b) => a.i.localeCompare(b.i))) {
+      const row = [r.i, r.n, r.g, r.v].concat(S.fl ? [r.l === 0 || r.l === 1 ? S.fl[r.l] : ''] : []);
+      r.u.forEach(u => row.push(e0(u[0]), e0(u[1]), e0(u[2]), e0(u[3]), u[4] == null ? '' : N(O.r1(u[4]))));
+      row.push(r.t == null ? '' : N(O.r1(r.t)), r.s === 2 ? 'Yoxla' : r.s === 1 ? 'Diqqət' : 'OK', [r.x, r.m].filter(Boolean).join('; '));
+      rows.push(row);
+    }
+    const widths = [10, 24, 8, 8].concat(S.fl ? [14] : []); for (let i = 0; i < S.sj.length * 5; i++) widths.push(12); widths.push(12, 10, 50);
+    const bytes = O.buildXlsx([{ name: 'Nəticələr', rows, widths, header: 1 }]);
+    if (await saveFile(safeName(S.ex) + '-canli-neticeler.xlsx', bytes, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')) toast('Excel faylı hazırdır');
+  }
+  async function check(manual) {
+    if (V.busy) return; V.busy = true; paintLine();
+    try {
+      let r = null;
+      if (V.snap && !manual) {                       // əvvəlcə yüngül sorğu: yeni versiya yoxdursa heç nə yüklənmir
+        const v = await canliCall(J.u, null, 'a=v&c=' + J.c);
+        if (v && v.ok && v.ver === V.ver) { V.srvNow = v.now; V.perfAt = performance.now(); V.err = ''; V.none = false; return; }
+        if (v && !v.ok && v.e === 'none') { V.none = true; V.err = ''; return; }
+      }
+      for (let k = 0; k < 2; k++) {
+        r = await canliCall(J.u, null, 'a=g&c=' + J.c);
+        if (r && !r.ok && r.e === 'retry' && k === 0) { await sleep(1500); continue; }
+        break;
+      }
+      if (!r || !r.ok) { if (r && r.e === 'none') { V.none = true; V.err = ''; return; } throw canliErr((r && r.e) || 'srv', canliSrvMsg(r)); }
+      let snap; try { snap = await canliOpen(r.d, J.c, kb); } catch (e) { throw canliErr('key', 'Link səhvdir və ya köhnəlib: məlumat açılmadı. Göndərəndən yeni baxış linki istəyin.'); }
+      if (!snap || snap.v !== 1 || !Array.isArray(snap.st) || !Array.isArray(snap.sj)) throw canliErr('fmt', 'Məlumatın formatı tanınmadı: saytın yeni versiyası lazımdır (səhifəni yeniləyin).');
+      if (r.ver !== V.ver) V.lastChange = Date.now();
+      V.snap = snap; V.ver = r.ver; V.srvTs = r.ts; V.srvNow = r.now || r.ts; V.perfAt = performance.now(); V.err = ''; V.none = false;
+      title.textContent = snap.ex || 'Canlı nəticələr'; who.textContent = snap.src ? 'Göndərən: ' + snap.src : '';
+      paintKpi(); paintTable();
+    } catch (e) { V.err = (e && e.message) || 'Xəta'; }
+    finally { V.busy = false; paintLine(); }
+  }
+  const pollMs = () => { const q = Date.now() - V.lastChange; return q < 600000 ? CANLI_POLL : q < 3600000 ? 60000 : 180000; };       // 10 dəqiqə dəyişiklik yoxdursa 1 dəq-dən, 1 saatdan sonra 3 dəq-dən bir
+  const loop = () => { clearTimeout(V.timer); if (!V.auto) return; V.timer = setTimeout(async () => { if (document.visibilityState === 'visible') await check(false); loop(); }, pollMs()); };
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { check(false); loop(); } });
+  setInterval(paintLine, 10000);
+  paintLine();
+  check(true).then(loop);
+}
+/* ---------- başlanğıc (göndərən tərəf) ---------- */
+function canliInit() {
+  window.addEventListener('hashchange', () => { if (/^#izle=/.test(location.hash)) location.reload(); else canliApplyLink(); });
+  window.addEventListener('online', () => { if (canliLoad().on && canliUi.err) canliSchedule(1500); });
+  canliApplyLink();
+  if (canliLoad().on) { canliUi.dirty = true; canliSchedule(3000); }
+}
+
 /* =====================  4 · NƏTİCƏLƏR  ===================== */
 function viewResults() {
   const c = state.cfg;
@@ -3136,6 +3589,7 @@ function viewResults() {
     h('p', { class: 'small muted', style: { margin: '8px 0 8px' } }, 'Telefonda yoxladınız, kompüterdə görmək istəyirsiniz? «Başqa cihaza göndər» bütün nəticələri (şəkillərsiz) bir fayl kimi Telegram, WhatsApp, e-poçt və s. ilə özünüzə göndərir. Kompüterdə saytı açıb «Gələn faylı aç» düyməsini basın və faylı seçin.'),
     h('div', { class: 'row' }, h('button', { class: 'btn', onclick: shareProject }, 'Başqa cihaza göndər'), h('button', { class: 'btn', onclick: () => xferIn.click() }, 'Gələn faylı aç'), xferIn)));
   root.append(neticeCard(all));
+  root.append(canliCard());
   const q = h('input', { type: 'text', placeholder: 'Nömrə və ya ad axtar…', value: state.res.q, style: { maxWidth: '240px' }, oninput: e => { state.res.q = e.target.value; paintTable(); } });
   const tblHold = h('div');
   const cmp = {
@@ -3422,9 +3876,11 @@ async function applyKeyLink() {
 load();
 markDuplicates();
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+if (canliViewerBoot()) return;
 renderAll();
 window.addEventListener('hashchange', applyKeyLink);
 applyKeyLink();
+canliInit();
 })();
 
 </script>
